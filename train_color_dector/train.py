@@ -89,5 +89,5 @@ for epoch in tqdm(range(10000)):
         writer.flush()
         step += 1
     if epoch % 10:
-        torch.save(color_net, './color_net_0' + str(epoch) + '.pth')
+        torch.save(color_net.state_dict(), './color_net_0' + str(epoch) + '.pth')
 
