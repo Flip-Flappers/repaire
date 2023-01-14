@@ -60,7 +60,7 @@ for i in tqdm(range(4500)):
         ans_list[num][6] = torch.tensor(int(minn[0]))
         ans_list[num][7] = torch.tensor(int(minn[1]))
         ans_list[num][8] = torch.tensor(int(minn[2]))
-
+        num += 1
 dataset = torch.utils.data.TensorDataset(image_list, ans_list)
 dataset_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=50, shuffle=True)
 for epoch in tqdm(range(10000)):
