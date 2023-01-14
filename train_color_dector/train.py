@@ -40,7 +40,7 @@ for i in tqdm(range(4500)):
 image_list = torch.zeros([num, 2, 3, 32, 32])
 ans_list = torch.zeros([num, 3])
 num = 0
-for i in tqdm(range(4500)):
+for i in tqdm(range(100)):
     for j in range(len(mask[i])):
         ori_loc = ori_picture[i]
         mask_loc = mask[i][j]
@@ -74,8 +74,12 @@ step = 0
 for epoch in tqdm(range(10000)):
     for image, ans in tqdm(dataset_loader):
         image = image.permute([1, 0, 2, 3, 4])
-        ori_image = image[0].cuda()
-        mask_image = image[1].cuda()
+        mask_image = image[1]
+        anti_mask_image = 1 - mask_image
+        ori_image = image[0] * anti_mask_image
+        ori_image = ori_image.cuda()
+        mask_image = mask_image.cuda()
+        anti_mask_image = 1 - mask_image
         output = color_net(ori_image, mask_image)
         loss = loss_fn(output, ans.cuda() / 255)
         optimizer.zero_grad()
