@@ -78,23 +78,30 @@ class BasicBlock(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=10):
+    def __init__(self, ori_image_block, mask_block, ori_image_num_blocks, mask_num_blocks, num_classes=10):
         super(ResNet, self).__init__()
         self.in_planes = 16
 
         self.ori_image_conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.ori_image_bn1 = nn.BatchNorm2d(16)
-        self.ori_image_layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
-        self.ori_image_layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
-        self.ori_image_layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
-        self.ori_image_linear = nn.Linear(64, num_classes)
+        self.ori_image_layer1 = self._make_layer(ori_image_block, 16, ori_image_num_blocks[0], stride=1)
+        self.ori_image_layer2 = self._make_layer(ori_image_block, 32, ori_image_num_blocks[1], stride=2)
+        self.ori_image_layer3 = self._make_layer(ori_image_block, 64, ori_image_num_blocks[2], stride=2)
 
+        self.in_planes = 16
         self.mask_conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
         self.mask_bn1 = nn.BatchNorm2d(16)
-        self.mask_layer1 = self._make_layer(block, 16, num_blocks[0], stride=1)
-        self.mask_layer2 = self._make_layer(block, 32, num_blocks[1], stride=2)
-        self.mask_layer3 = self._make_layer(block, 64, num_blocks[2], stride=2)
-        self.mask_linear = nn.Linear(64, num_classes)
+        self.mask_layer1 = self._make_layer(mask_block, 16, mask_num_blocks[0], stride=1)
+        self.mask_layer2 = self._make_layer(mask_block, 32, mask_num_blocks[1], stride=2)
+        self.mask_layer3 = self._make_layer(mask_block, 64, mask_num_blocks[2], stride=2)
+
+        self.out_linear1 = nn.Linear(64 * 2, 64)
+        self.out_linear2 = nn.Linear(64, 32)
+        self.out_linear3 = nn.Linear(32, 16)
+        self.out_linear4 = nn.Linear(16, 8)
+        self.out_linear5 = nn.Linear(8, 4)
+        self.out_linear6 = nn.Linear(4, 3)
+
         self.apply(_weights_init)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -106,27 +113,33 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
-        ori_image_out = F.relu(self.bn1(self.conv1(x)))
-        ori_image_out = self.layer1(ori_image_out)
-        ori_image_out = self.layer2(ori_image_out)
-        ori_image_out = self.layer3(ori_image_out)
+    def forward(self, ori_image, mask_image):
+        ori_image_out = F.relu(self.ori_image_bn1(self.ori_image_conv1(ori_image)))
+        ori_image_out = self.ori_image_layer1(ori_image_out)
+        ori_image_out = self.ori_image_layer2(ori_image_out)
+        ori_image_out = self.ori_image_layer3(ori_image_out)
         ori_image_out = F.avg_pool2d(ori_image_out, ori_image_out.size()[3])
         ori_image_out = ori_image_out.view(ori_image_out.size(0), -1)
 
-        mask_out = F.relu(self.bn1(self.conv1(x)))
-        mask_out = self.layer1(mask_out)
-        mask_out = self.layer2(mask_out)
-        mask_out = self.layer3(mask_out)
+        mask_out = F.relu(self.mask_bn1(self.mask_conv1(mask_image)))
+        mask_out = self.mask_layer1(mask_out)
+        mask_out = self.mask_layer2(mask_out)
+        mask_out = self.mask_layer3(mask_out)
         mask_out = F.avg_pool2d(mask_out, mask_out.size()[3])
         mask_out = mask_out.view(mask_out.size(0), -1)
-        out = self.linear(mask_out)
 
+        out = torch.cat([ori_image_out, mask_out], dim=1)
+        out = nn.Dropout()(nn.ReLU()(self.out_linear1(out)))
+        out = nn.Dropout()(nn.ReLU()(self.out_linear2(out)))
+        out = nn.ReLU()(self.out_linear3(out))
+        out = nn.ReLU()(self.out_linear4(out))
+        out = nn.ReLU()(self.out_linear5(out))
+        out = nn.Tanh()(self.out_linear6(out))
         return out
 
 
 def resnet20():
-    return ResNet(BasicBlock, [3, 3, 3])
+    return ResNet(BasicBlock, BasicBlock, [3, 3, 3], [3, 3, 3])
 
 
 def resnet32():
