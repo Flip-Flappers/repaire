@@ -10,26 +10,21 @@ from tqdm import tqdm
 
 import division.Image_Segmentation as Segmentation
 
-
-import torch
-import torch.nn as nn
-from torchvision.io.image import read_image
 from torchvision.transforms.functional import normalize, resize, to_pil_image
 
-from torchcam.methods import GradCAM
 import matplotlib.pyplot as plt
-from torchcam.utils import overlay_mask
+
 fin_ans = 0
 zuidacha = 0
 pingjuncha = 0
+ori_num = [4998, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
 for ll in range(10):
-    for numss in tqdm(range(323)):
+    for numss in tqdm(range(ori_num[ll])):
         # copy ori picture
         s = "{:04d}".format(numss)
-        shutil.copy('../../color_detector_dataset/pngcifar10/fgsm/' + str(ll) + '/' + s + '.png', '../../color_detector_dataset/fgsm/' + str(ll) + '/ori_picture/' + s + '.png')
 
         # make mask
-        image = cv2.imread('../../color_detector_dataset/pngcifar10/fgsm/' + str(ll) + '/' + s + '.png')
+        image = cv2.imread('../../fin_dataset/cifar10/ori_image/' + str(ll) + '/' + s + '.png')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         seg_ans = Segmentation.init_R(image, image.shape[0], image.shape[1], 100., 3, 0.8)
         ans = seg_ans[0]
@@ -40,10 +35,10 @@ for ll in range(10):
         num = 0
         for i in range(32):
             for j in range(32):
-                if(visit[ans[i][j]] == -1):
+                if (visit[ans[i][j]] == -1):
                     visit[ans[i][j]] = num
                     num += 1
-        #print(num)
+        # print(num)
         all = np.zeros([num, 3])
         all_num = np.zeros(num)
         avg = np.zeros([num, 3])
@@ -54,7 +49,7 @@ for ll in range(10):
                 for z in range(3):
                     all[int(visit[ans[i][j]])][z] = all[int(visit[ans[i][j]])][z] + image[i][j][z]
                     all_num[int(visit[ans[i][j]])] += 1
-                    max_color[int(visit[ans[i][j]])][z] = max(max_color[int(visit[ans[i][j]])][z],  image[i][j][z])
+                    max_color[int(visit[ans[i][j]])][z] = max(max_color[int(visit[ans[i][j]])][z], image[i][j][z])
                     min_color[int(visit[ans[i][j]])][z] = min(min_color[int(visit[ans[i][j]])][z], image[i][j][z])
         for k in range(num):
             if all_num[k] >= 4:
@@ -64,7 +59,7 @@ for ll in range(10):
                         if visit[ans[i][j]] == k:
                             mask[i][j] = 255
                 mask = PIL.Image.fromarray(np.uint8(mask))
-                if not os.path.exists('../../color_detector_dataset/fgsm/' + str(ll) + '/mask/' + s):
+                if not os.path.exists('../../fin_dataset/cifar10/color_edge_image/' + str(ll) + '/mask/' + s):
                     os.makedirs('../../color_detector_dataset/fgsm/' + str(ll) + '/mask/' + s)
                 sk = "{:04d}".format(k)
                 mask.save('../../color_detector_dataset/fgsm/' + str(ll) + '/mask/' + s + '/' + sk
@@ -111,4 +106,4 @@ for ll in range(10):
         plt.subplot(1, 5, 3)
         plt.imshow(to_pil_image(np.uint8(tmp)))
 
-        #plt.show()
+        # plt.show()

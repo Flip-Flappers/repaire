@@ -23,18 +23,19 @@ fin_ans = 0
 zuidacha = 0
 pingjuncha = 0
 for ll in range(10):
-    for numss in tqdm(range(323)):
+    for numss in tqdm(range(4500)):
         # copy ori picture
         s = "{:04d}".format(numss)
-        shutil.copy('../../color_detector_dataset/pngcifar10/fgsm/' + str(ll) + '/' + s + '.png', '../../color_detector_dataset/fgsm/' + str(ll) + '/ori_picture/' + s + '.png')
+        shutil.copy('../../recover_dataset/pngcifar10/train/' + str(ll) + '/' + s + '.png', '../../recover_dataset/train/' + str(ll) + '/ori_picture/' + s + '.png')
 
         # make mask
-        image = cv2.imread('../../color_detector_dataset/pngcifar10/fgsm/' + str(ll) + '/' + s + '.png')
+        image = cv2.imread('../../recover_dataset/pngcifar10/train/' + str(ll) + '/' + s + '.png')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         seg_ans = Segmentation.init_R(image, image.shape[0], image.shape[1], 100., 3, 0.8)
         ans = seg_ans[0]
         tmp = np.zeros([32, 32, 3])
         tmp2 = np.zeros([3, 32, 32])
+        tmp3 = np.ones([32 * 3, 32 * 3, 3]) * 255
         color = np.zeros([ans.max() + 1, 3])
         visit = np.ones((ans.max() + 1)) * -1
         num = 0
@@ -64,10 +65,10 @@ for ll in range(10):
                         if visit[ans[i][j]] == k:
                             mask[i][j] = 255
                 mask = PIL.Image.fromarray(np.uint8(mask))
-                if not os.path.exists('../../color_detector_dataset/fgsm/' + str(ll) + '/mask/' + s):
-                    os.makedirs('../../color_detector_dataset/fgsm/' + str(ll) + '/mask/' + s)
+                if not os.path.exists('../../recover_dataset/train/' + str(ll) + '/mask/' + s):
+                    os.makedirs('../../recover_dataset/train/' + str(ll) + '/mask/' + s)
                 sk = "{:04d}".format(k)
-                mask.save('../../color_detector_dataset/fgsm/' + str(ll) + '/mask/' + s + '/' + sk
+                mask.save('../../recover_dataset/train/' + str(ll) + '/mask/' + s + '/' + sk
                           + '_' + str(np.around(all[k] * 3 / all_num[k]))
                           + '_' + str(max_color[k])
                           + '_' + str(min_color[k])
@@ -106,9 +107,40 @@ for ll in range(10):
                 tmp2[1][i][j] = color[ans[i][j]][1]
                 tmp2[2][i][j] = color[ans[i][j]][2]
 
+        for i in range(32 * 3):
+            for j in range(32 * 3):
+                ori_x = int(i / 3)
+                ori_y = int(j / 3)
+                mode_x = i % 3
+                mode_y = j % 3
+                new_x = ori_x
+                new_y = ori_y
+                if mode_x == 0:
+                    new_x -= 1
+                if mode_y == 0:
+                    new_y -= 1
+                if mode_x == 2:
+                    new_x += 1
+                if mode_y == 2:
+                    new_y += 1
+                if mode_y == 1 and mode_x == 1:
+                    continue
+                if new_x < 0 or new_y < 0 or new_x >= 32 or new_y >= 32:
+                    continue
+                same = 1
+                for z in range(3):
+                    if tmp[ori_x][ori_y][z] != tmp[new_x][new_y][z]:
+                        same = 0
+                        break
+                if same == 0:
+                    for z in range(3):
+                        tmp3[i][j][z] = 0
+        edge = PIL.Image.fromarray(np.uint8(tmp3))
+        edge.save('../../recover_dataset/train/' + str(ll) + '/edge/' + s + '.png')
         plt.figure()
-
-        plt.subplot(1, 5, 3)
+        plt.subplot(1, 5, 2)
         plt.imshow(to_pil_image(np.uint8(tmp)))
+        plt.subplot(1, 5, 3)
+        plt.imshow(to_pil_image(np.uint8(tmp3)))
 
         #plt.show()
