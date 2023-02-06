@@ -48,7 +48,6 @@ for i in tqdm(range(ori_picture_num)):
         num += 1
 image_list = torch.zeros([num, 2, 3, 32, 32])
 ans_list = torch.zeros([num, 3])
-num = 0
 """for i in tqdm(range(ori_picture_num)):
     for j in range(len(mask[i])):
         ori_loc = ori_picture[i]
@@ -77,14 +76,15 @@ torch.save(ans_list, './color_ans_list_' + str(label) + '.t')"""
 image_list = torch.load('./color_image_list_' + str(label) + '.t')
 ans_list = torch.load('./color_ans_list_' + str(label) + '.t')
 dataset = torch.utils.data.TensorDataset(image_list, ans_list)
-dataset_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=1200, shuffle=True)
+dataset_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=500, shuffle=True)
 
-color_net = models.resnet20().cuda()
+color_net = models.color_net().cuda()
 #color_net.load_state_dict(torch.load('./color_net_0899.pth'))
 optimizer = torch.optim.Adam(color_net.parameters(), lr=1e-3, betas=(0.5, 0.999))
 loss_fn = nn.MSELoss()
 step = 0
 for epoch in tqdm(range(10000)):
+    tmp = 0
     for image, ans in tqdm(dataset_loader):
         image = image.permute([1, 0, 2, 3, 4])
         ori_image = image[0]
@@ -94,13 +94,15 @@ for epoch in tqdm(range(10000)):
         output = color_net(ori_image, mask_image)
         ans = ans.cuda()
         loss = loss_fn(output, ans)
-
+        tmp += loss.detach() * image.shape[0]
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        writer.add_scalar('color_loss', loss, step)
-        writer.flush()
-        step += 1
+
+
+    writer.add_scalar('color_loss', (torch.sqrt(tmp / num))* 255 * 2, step)
+    writer.flush()
+    step += 1
     if epoch % 10:
         torch.save(color_net.state_dict(), './color_net_0' + str(epoch) + '.pth')
 
