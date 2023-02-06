@@ -13,6 +13,7 @@ import division.Image_Segmentation as Segmentation
 from torchvision.transforms.functional import normalize, resize, to_pil_image
 
 import matplotlib.pyplot as plt
+import argparse
 
 fin_ans = 0
 zuidacha = 0
@@ -20,13 +21,13 @@ pingjuncha = 0
 ori_num = [4998, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
 net = torch.load("../net_T/pre/resnet20_check_point.pth").cuda()
 net.eval()
-import argparse
+
 parser = argparse.ArgumentParser(description='1')
 
 parser.add_argument('--ll', type=int)
 args = parser.parse_args()
 ll = args.ll
-print(llx)
+print(ll)
 for numss in tqdm(range(ori_num[ll])):
     # copy ori picture
     s = "{:04d}".format(numss)

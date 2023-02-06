@@ -25,22 +25,31 @@ from PIL import Image
 import torchvision.transforms as transforms
 
 from train_color_dector import models
-writer = SummaryWriter('./runs/0')
-root = '../../color_detector_dataset/train/0'
-ori_picture = sorted(glob.glob(os.path.join(root, 'ori_picture') + '/*.*'))
+
+parser = argparse.ArgumentParser(description='1')
+
+parser.add_argument('--label', type=int)
+args = parser.parse_args()
+label = args.label
+print(label)
+
+writer = SummaryWriter('./runs/' + str(label))
+root = '../../fin_dataset/cifar10/train/'
+ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
+ori_picture_num = len(ori_picture)
 mask = []
-for i in range(4500):
+for i in range(ori_picture_num):
     s = "{:04d}".format(i)
-    mask.append(sorted(glob.glob(os.path.join(root, 'mask/%s' % s) + '/*.*')))
+    mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
 
 num = 0
-for i in tqdm(range(4500)):
+for i in tqdm(range(ori_picture_num)):
     for j in range(len(mask[i])):
         num += 1
 image_list = torch.zeros([num, 2, 3, 32, 32])
 ans_list = torch.zeros([num, 3])
 num = 0
-for i in tqdm(range(4500)):
+"""for i in tqdm(range(ori_picture_num)):
     for j in range(len(mask[i])):
         ori_loc = ori_picture[i]
         mask_loc = mask[i][j]
@@ -56,29 +65,22 @@ for i in tqdm(range(4500)):
         mask_tensor = transforms.Normalize((0.5, 0.5, 0.5,), (0.5, 0.5, 0.5))(mask_tensor)
         image_list[num, 0] = ori_tensor
         image_list[num, 1] = mask_tensor
-        tmp = mask_loc[52:][:-4].split('_')
+        tmp = mask_loc[61:][:-4].split('_')
         avg = tmp[0][1:][:-1].split('.')[:-1]
-        ans_list[num][0] = (torch.tensor(int(avg[0]))) / 255 - 0.5 * 2
-        ans_list[num][1] = (torch.tensor(int(avg[1]))) / 255 - 0.5 * 2
-        ans_list[num][2] = (torch.tensor(int(avg[2]))) / 255 - 0.5 * 2
-        """maxn = tmp[1][1:][:-1].split('.')[:-1]
-        ans_list[num][3] = torch.tensor(int(maxn[0]))
-        ans_list[num][4] = torch.tensor(int(maxn[1]))
-        ans_list[num][5] = torch.tensor(int(maxn[2]))
-        minn = tmp[2][1:][:-1].split('.')[:-1]
-        ans_list[num][6] = torch.tensor(int(minn[0]))
-        ans_list[num][7] = torch.tensor(int(minn[1]))
-        ans_list[num][8] = torch.tensor(int(minn[2]))"""
+        ans_list[num][0] = ((torch.tensor(int(avg[0]))) / 255 - 0.5) * 2
+        ans_list[num][1] = ((torch.tensor(int(avg[1]))) / 255 - 0.5) * 2
+        ans_list[num][2] = ((torch.tensor(int(avg[2]))) / 255 - 0.5) * 2
         num += 1
-torch.save(image_list, './image_list.t')
-torch.save(ans_list, './ans_list.t')
-image_list = torch.load('./image_list.t')
-ans_list = torch.load('./ans_list.t')
+torch.save(image_list, './color_image_list_' + str(label) + '.t')
+torch.save(ans_list, './color_ans_list_' + str(label) + '.t')"""
+
+image_list = torch.load('./color_image_list_' + str(label) + '.t')
+ans_list = torch.load('./color_ans_list_' + str(label) + '.t')
 dataset = torch.utils.data.TensorDataset(image_list, ans_list)
 dataset_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=1200, shuffle=True)
 
 color_net = models.resnet20().cuda()
-color_net.load_state_dict(torch.load('./color_net_0357.pth'))
+#color_net.load_state_dict(torch.load('./color_net_0899.pth'))
 optimizer = torch.optim.Adam(color_net.parameters(), lr=1e-3, betas=(0.5, 0.999))
 loss_fn = nn.MSELoss()
 step = 0
@@ -90,7 +92,6 @@ for epoch in tqdm(range(10000)):
         ori_image = ori_image.cuda()
         mask_image = mask_image.cuda()
         output = color_net(ori_image, mask_image)
-        ans = ans
         ans = ans.cuda()
         loss = loss_fn(output, ans)
 
