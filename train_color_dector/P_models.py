@@ -25,16 +25,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
-
+from Pconv_models.partialconv2d import PartialConv2d
 from torch.autograd import Variable
 
-__all__ = ['ResNet', 'resnet20', 'resnet32', 'resnet44', 'resnet56', 'resnet110', 'resnet1202']
 
 def _weights_init(m):
     classname = m.__class__.__name__
-    #print(classname)
+    # print(classname)
     if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
         init.kaiming_normal_(m.weight)
+
 
 class LambdaLayer(nn.Module):
     def __init__(self, lambd):
@@ -43,6 +43,44 @@ class LambdaLayer(nn.Module):
 
     def forward(self, x):
         return self.lambd(x)
+
+
+class P_BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1, option='A'):
+        super(P_BasicBlock, self).__init__()
+        self.conv1 = PartialConv2d(in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=True,
+                                   multi_channel=True, return_mask=True)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = PartialConv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=True, multi_channel=True,
+                                   return_mask=True)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != planes:
+            if option == 'A':
+                """
+                For CIFAR10 ResNet paper uses option A.
+                """
+                self.shortcut = LambdaLayer(lambda x:
+                                            F.pad(x[:, :, ::2, ::2], (0, 0, 0, 0, planes // 4, planes // 4), "constant",
+                                                  0))
+            elif option == 'B':
+                self.shortcut = nn.Sequential(
+                    PartialConv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=True,
+                                  multi_channel=True, return_mask=True),
+                    nn.BatchNorm2d(self.expansion * planes)
+                )
+
+    def forward(self, x):
+        out, mask_out = self.conv1(x[0], x[1])
+        out = F.relu(self.bn1(out))
+        out, mask_out = self.conv2(out, mask_out)
+        out = self.bn2(out)
+        out += self.shortcut(x[0])
+        out = F.relu(out)
+        return out, mask_out
 
 
 class BasicBlock(nn.Module):
@@ -62,16 +100,19 @@ class BasicBlock(nn.Module):
                 For CIFAR10 ResNet paper uses option A.
                 """
                 self.shortcut = LambdaLayer(lambda x:
-                                            F.pad(x[:, :, ::2, ::2], (0, 0, 0, 0, planes//4, planes//4), "constant", 0))
+                                            F.pad(x[:, :, ::2, ::2], (0, 0, 0, 0, planes // 4, planes // 4), "constant",
+                                                  0))
             elif option == 'B':
                 self.shortcut = nn.Sequential(
-                     nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
-                     nn.BatchNorm2d(self.expansion * planes)
+                    nn.Conv2d(in_planes, self.expansion * planes, kernel_size=1, stride=stride, bias=False),
+                    nn.BatchNorm2d(self.expansion * planes)
                 )
 
     def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = self.bn2(self.conv2(out))
+        out = self.conv1(x)
+        out = F.relu(self.bn1(out))
+        out = self.conv2(out)
+        out = self.bn2(out)
         out += self.shortcut(x)
         out = F.relu(out)
         return out
@@ -82,7 +123,8 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.in_planes = 16
 
-        self.ori_image_conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+        self.ori_image_conv1 = PartialConv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=True, multi_channel=True,
+                                             return_mask=True)
         self.ori_image_bn1 = nn.BatchNorm2d(16)
         self.ori_image_layer1 = self._make_layer(ori_image_block, 16, ori_image_num_blocks[0], stride=1)
         self.ori_image_layer2 = self._make_layer(ori_image_block, 32, ori_image_num_blocks[1], stride=2)
@@ -105,7 +147,7 @@ class ResNet(nn.Module):
         self.apply(_weights_init)
 
     def _make_layer(self, block, planes, num_blocks, stride):
-        strides = [stride] + [1]*(num_blocks-1)
+        strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
             layers.append(block(self.in_planes, planes, stride))
@@ -113,15 +155,19 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, ori_image, mask_image):
-        ori_image_out = F.relu(self.ori_image_bn1(self.ori_image_conv1(ori_image)))
-        ori_image_out = self.ori_image_layer1(ori_image_out)
-        ori_image_out = self.ori_image_layer2(ori_image_out)
-        ori_image_out = self.ori_image_layer3(ori_image_out)
+    def forward(self, ori_image, mask_image, ori_mask_image):
+        ori_image_out, mask_image_out = self.ori_image_conv1(ori_image, mask=mask_image)
+        ori_image_out = F.relu(self.ori_image_bn1(ori_image_out))
+        ori_image_out, mask_image_out = self.ori_image_layer1([ori_image_out, mask_image_out])
+
+        ori_image_out, mask_image_out = self.ori_image_layer2([ori_image_out, mask_image_out])
+
+        ori_image_out, mask_image_out = self.ori_image_layer3([ori_image_out, mask_image_out])
+
         ori_image_out = F.avg_pool2d(ori_image_out, ori_image_out.size()[3])
         ori_image_out = ori_image_out.view(ori_image_out.size(0), -1)
 
-        mask_out = F.relu(self.mask_bn1(self.mask_conv1(mask_image)))
+        mask_out = F.relu(self.mask_bn1(self.mask_conv1(ori_mask_image)))
         mask_out = self.mask_layer1(mask_out)
         mask_out = self.mask_layer2(mask_out)
         mask_out = self.mask_layer3(mask_out)
@@ -139,7 +185,4 @@ class ResNet(nn.Module):
 
 
 def color_net():
-    return ResNet(BasicBlock, BasicBlock, [3, 3, 3], [3, 3, 3])
-
-def color_net2():
-    return ResNet(BasicBlock, BasicBlock, [18, 18, 18], [18, 18, 18])
+    return ResNet(P_BasicBlock, BasicBlock, [18, 18, 18], [18, 18, 18])

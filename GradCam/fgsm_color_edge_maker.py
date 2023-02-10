@@ -6,6 +6,7 @@ import PIL.Image
 import cv2
 import torch
 import numpy as np
+from torchvision import transforms
 from tqdm import tqdm
 
 import division.Image_Segmentation as Segmentation
@@ -37,7 +38,9 @@ for numss in tqdm(range(ori_num_test[ll])):
     # make mask
     image = cv2.imread(root + '/ori_image/' + str(ll) + '/' + s + '.png')
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    seg_ans = Segmentation.init_R(image, image.shape[0], image.shape[1], 100., 3, 0.8, net, ll)
+    fgsm_ori_pic = PIL.Image.open(root + '/ori_image/' + str(ll) + '/' + s + '.png')
+    fgsm_ori_tensor = transforms.ToTensor()(fgsm_ori_pic).unsqueeze(0).cuda()
+    seg_ans = Segmentation.init_R(image, image.shape[0], image.shape[1], 100., 3, 0.8, net, int(net(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(fgsm_ori_tensor))[0].argmax()))
     ans = seg_ans[0]
     tmp = np.zeros([32, 32, 3])
     tmp2 = np.zeros([3, 32, 32])
