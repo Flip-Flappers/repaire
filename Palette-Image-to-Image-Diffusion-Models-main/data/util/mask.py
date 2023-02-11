@@ -141,7 +141,7 @@ def brush_stroke_mask(img_shape,
     We prefer to use `uint8` as the data type of masks, which may be different
     from other codes in the community.
 
- 
+
 
     Args:
         img_shape (tuple[int]): Size of the image.
