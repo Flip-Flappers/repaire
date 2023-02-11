@@ -56,7 +56,8 @@ class InpaintDataset(data.Dataset):
         img = self.tfs(self.loader(path[0]))
 
         #mask 0, 1, 1为mask区域
-        mask = transforms.ToTensor()(Image.open(path[1]))
+        #mask = transforms.ToTensor()(Image.open(path[1]))
+        mask = self.get_mask()
 
         #加入噪声后的图片 原图0.5
         cond_image = img*(1. - mask) + mask*torch.randn_like(img)
@@ -72,7 +73,7 @@ class InpaintDataset(data.Dataset):
         ret['cond_image'] = cond_image
         ret['mask_image'] = mask_img
         ret['mask'] = mask
-        ret['path'] = path[0][47:51] + '_' + path[1][64:]
+        ret['path'] = path[0][51:55] + '_' + path[1][68:]
         return ret
 
     def __len__(self):

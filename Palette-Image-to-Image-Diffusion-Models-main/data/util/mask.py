@@ -32,7 +32,7 @@ def random_cropping_bbox(img_shape=(256,256), mask_mode='onedirection'):
             left = np.random.randint(0, w-width)
     return (top, left, height, width)
 
-def random_bbox(img_shape=(256,256), max_bbox_shape=(128, 128), max_bbox_delta=40, min_margin=20):
+def random_bbox(img_shape=(32,32), max_bbox_shape=(12, 12), max_bbox_delta=8, min_margin=1):
     """Generate a random bbox for the mask on a given image.
 
     In our implementation, the max value cannot be obtained since we use
@@ -124,10 +124,10 @@ def bbox2mask(img_shape, bbox, dtype='uint8'):
 
 
 def brush_stroke_mask(img_shape,
-                      num_vertices=(4, 12),
+                      num_vertices=(2, 6),
                       mean_angle=2 * math.pi / 5,
                       angle_range=2 * math.pi / 15,
-                      brush_width=(12, 40),
+                      brush_width=(3, 10),
                       max_loops=4,
                       dtype='uint8'):
     """Generate free-form mask.

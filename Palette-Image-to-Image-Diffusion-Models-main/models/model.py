@@ -4,6 +4,9 @@ from core.base_model import BaseModel
 from core.logger import LogTracker
 import copy
 import torchvision.transforms as transforms
+
+
+
 class EMA():
     def __init__(self, beta=0.9999):
         super().__init__()
@@ -23,6 +26,8 @@ class Palette(BaseModel):
         super(Palette, self).__init__(**kwargs)
 
         ''' networks, dataloder, optimizers, losses, etc. '''
+        self.net_V = torch.load("../net_T/pre/resnet20_check_point.pth")
+        self.net_V = self.net_V.eval()
         self.loss_fn = losses[0]
         self.netG = networks[0]
         if ema_scheduler is not None:
