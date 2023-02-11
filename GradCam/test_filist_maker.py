@@ -38,7 +38,9 @@ args = parser.parse_args()
 label = args.label
 flist = []
 
+ori_num_train = [4998, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
 
+fo = open("./test.flist", "w")
 
 
 root = '../../fin_dataset/cifar10/test'
@@ -61,11 +63,10 @@ num = 0
 for i in tqdm(range(ori_picture_num)):
     for j in range(len(mask[i])):
         s = "{:04d}".format(i)
-        if not os.path.exists(root + '/diff_color_edge_image/' + str(label) + '/' + s):
-            os.makedirs(root + '/diff_color_edge_image/' + str(label) + '/' + s)
         sj = "{:04d}".format(j)
-        image = Image.open(mask[i][j])
-        image.save(root + '/diff_color_edge_image/' + str(label) + '/' + s + '/' + sj + '.png')
+        path = '../../../fin_dataset/cifar10/test/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/diff_color_edge_image/' + str(label) + '/' + s  + '/' + sj +'.png'
+        fo.write(path + '\n')
+        # flist.append(path)
 
 # print(flist)
 fo.close()
