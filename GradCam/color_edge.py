@@ -18,7 +18,7 @@ import argparse
 fin_ans = 0
 zuidacha = 0
 pingjuncha = 0
-root = '../../fin_dataset/cifar10/test/fgsm/'
+root = '../../fin_dataset/cifar10/test/'
 #ori_num_train = [4998, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
 ori_num_test = [1003, 1004, 971, 1003, 1005, 999, 1003, 1001, 1002, 1009]
 net = torch.load("../net_T/pre/resnet20_check_point.pth").cuda()
@@ -78,43 +78,3 @@ for numss in tqdm(range(ori_num_test[ll])):
                       + '_' + str(max_color[k])
                       + '_' + str(min_color[k])
                       + '.png')
-    l_area = 0
-    for i in range(num):
-        if all_num[i] >= 4:
-            l_area += 1
-    for i in range(num):
-        for j in range(3):
-            zuidacha = max(zuidacha, max_color[i][j] - min_color[i][j])
-            pingjuncha += (max_color[i][j] - min_color[i][j]) / 3 / num
-    print(num, l_area, zuidacha, pingjuncha / (ll + 1) / numss)
-    for i in range(num):
-        for z in range(3):
-            avg[i][z] = all[i][z] / all_num[i] * 3
-    for i in range(32):
-        for j in range(32):
-            ans[i][j] = visit[ans[i][j]];
-    """for i in range(num):
-        color[i][0] = random.randint(0, 255)
-        color[i][1] = random.randint(0, 255)
-        color[i][2] = random.randint(0, 255)"""
-    for i in range(num):
-        color[i][0] = int(avg[i][0])
-        color[i][1] = int(avg[i][1])
-        color[i][2] = int(avg[i][2])
-    for i in range(32):
-        for j in range(32):
-            tmp[i][j][0] = color[ans[i][j]][0]
-            tmp[i][j][1] = color[ans[i][j]][1]
-            tmp[i][j][2] = color[ans[i][j]][2]
-    for i in range(32):
-        for j in range(32):
-            tmp2[0][i][j] = color[ans[i][j]][0]
-            tmp2[1][i][j] = color[ans[i][j]][1]
-            tmp2[2][i][j] = color[ans[i][j]][2]
-
-    plt.figure()
-
-    plt.subplot(1, 5, 3)
-    plt.imshow(to_pil_image(np.uint8(tmp)))
-
-        # plt.show()

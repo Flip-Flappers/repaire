@@ -115,9 +115,6 @@ for numss in tqdm(range(ori_num_test[ll])):
             tmp2[1][i][j] = color[ans[i][j]][1]
             tmp2[2][i][j] = color[ans[i][j]][2]
 
-    plt.figure()
 
-    plt.subplot(1, 5, 3)
-    plt.imshow(to_pil_image(np.uint8(tmp)))
 
         # plt.show()

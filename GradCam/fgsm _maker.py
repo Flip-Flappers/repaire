@@ -37,6 +37,11 @@ args = parser.parse_args()
 label = args.label
 attack = args.attack
 target = args.target
+num = 0
+
+trainset = torchvision.datasets.CIFAR10(root='../../root_data', train=False, download=True,
+                                        transform=transforms.ToTensor())
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=False, num_workers=0)
 
 
 root = '../../fin_dataset/cifar10/test/'
@@ -69,9 +74,9 @@ elif attack == 'PGD':
         adversary = PGDAttack(
             net_R,
             loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-            eps=7 / 255,
+            eps=8 / 255,
             nb_iter=10, eps_iter=150 / 255 / 5, clip_min=0, clip_max=1.0,
-            targeted=target)
+            targeted=False)
     # FGSM
 elif attack == 'FGSM':
     adversary = GradientSignAttack(
@@ -95,14 +100,18 @@ step = 0
 all_loss = 0
 
 correct = 0
-num = 0
 
-for i in tqdm(range(ori_picture_num)):
-    s = "{:04d}".format(i)
-    ori_loc = ori_picture[i]
-    ori_pic = Image.open(ori_loc)
-    ori_tensor = transforms.ToTensor()(ori_pic).unsqueeze(0)
-    final_image_tmp = adversary.perturb(ori_tensor.cuda(), torch.tensor(label).unsqueeze(0).cuda())
-    fgsm_image = transforms.ToPILImage()(final_image_tmp.squeeze(0))
-    fgsm_image.save(root + 'fgsm/ori_image/' + str(label) + '/' + s + '.png')
 
+for data in trainloader:
+    ori_tensor, labels = data
+    if labels[0] != 0:
+        true_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(ori_tensor.cuda()))[0].argmax()
+        if true_label == labels[0]:
+            final_image_tmp = adversary.perturb(ori_tensor.cuda(), torch.tensor(int(labels[0])).unsqueeze(0).cuda())
+            fgsm_image = transforms.ToPILImage()(final_image_tmp.squeeze(0))
+            tmp_fgsm_image = transforms.ToTensor()(fgsm_image).unsqueeze(0)
+            fin_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(tmp_fgsm_image))[0].argmax()
+            if fin_label == 0:
+                s = "{:04d}".format(num)
+                fgsm_image.save(root + 'fgsm/ori_image/' + str(0) + '/' + s + '.png')
+                num += 1

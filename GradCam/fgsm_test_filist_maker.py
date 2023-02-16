@@ -38,9 +38,9 @@ args = parser.parse_args()
 label = args.label
 flist = []
 
-ori_num_train = [4998, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
+ori_num_train = [479, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
 
-fo = open("./fgsm_test.flist", "w")
+fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/fgsm_test.flist", "w")
 
 
 root = '../../fin_dataset/cifar10/test/fgsm'
@@ -61,11 +61,12 @@ image_list = torch.zeros([num, 2, 3, 32, 32])
 ans_list = torch.zeros([num, 3])
 num = 0
 for i in tqdm(range(ori_picture_num)):
-    for j in range(len(mask[i])):
+    for j in range(10):
         s = "{:04d}".format(i)
         sj = "{:04d}".format(j)
-        path = '../../../fin_dataset/cifar10/test/fgsm/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/fgsm/diff_color_edge_image/' + str(label) + '/' + s  + '/' + sj +'.png'
+        path = '../../../fin_dataset/cifar10/test/fgsm/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/fgsm/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
         fo.write(path + '\n')
         # flist.append(path)
 
 # print(flist)
+fo.close()

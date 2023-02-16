@@ -1,3 +1,5 @@
+import random
+
 import torch.utils.data as data
 from torchvision import transforms
 from PIL import Image
@@ -48,7 +50,60 @@ class InpaintDataset(data.Dataset):
         self.mask_config = mask_config
         self.mask_mode = self.mask_config['mask_mode']
         self.image_size = image_size
+        self.ones = torch.ones([1, 32, 32])
+        self.zeros = torch.zeros([1, 32, 32])
+        self.fin_mask = []
 
+        for kk in range(3 * 2):
+            tmp = torch.zeros([1, 32, 32])
+            k = kk + 2
+            for i in range(32):
+                if i % k < k / 2:
+                    for j in range(32):
+                        if j % k < k / 2:
+                            tmp[0][i][j] = 1
+                else:
+                    for j in range(32):
+                        if j % k > k / 2:
+                            tmp[0][i][j] = 1
+            self.fin_mask.append(1 - tmp)
+
+
+
+        tmp_zero = torch.zeros([2, 2])
+        tmp_one = torch.ones([2, 2])
+        tmp_zero_one24 = torch.cat([tmp_zero, tmp_one], dim=0)
+        tmp_zero_one28 = tmp_zero_one24.clone()
+        for i in range(7):
+            tmp_zero_one28 = torch.cat([tmp_zero_one28, tmp_zero_one24], dim=0)
+        tmp_zero_one32 = tmp_zero_one28.clone()
+        for i in range(15):
+            if i % 2 == 0:
+                tmp_zero_one32 = torch.cat([tmp_zero_one32, 1 - tmp_zero_one28], dim=1)
+            else:
+                tmp_zero_one32 = torch.cat([tmp_zero_one32, tmp_zero_one28], dim=1)
+        self.fin_mask3 = tmp_zero_one32.unsqueeze(0)
+        tmp_zero = torch.zeros([4, 4])
+        tmp_one = torch.ones([4, 4])
+        tmp_zero_one48 = torch.cat([tmp_zero, tmp_one], dim=0)
+        tmp_zero_one432 = tmp_zero_one48.clone()
+        for i in range(3):
+            tmp_zero_one432 = torch.cat([tmp_zero_one432, tmp_zero_one48], dim=0)
+        tmp_zero_one3232 = tmp_zero_one432.clone()
+        for i in range(7):
+            if i % 2 == 0:
+                tmp_zero_one3232 = torch.cat([tmp_zero_one3232, 1 - tmp_zero_one432], dim=1)
+            else:
+                tmp_zero_one3232 = torch.cat([tmp_zero_one3232, tmp_zero_one432], dim=1)
+        self.fin_mask4 = tmp_zero_one3232.unsqueeze(0)
+        self.fin_mask5 = 1 - self.fin_mask3
+        self.fin_mask6 = 1 - self.fin_mask4
+
+        self.fin_mask.append(self.fin_mask3)
+        self.fin_mask.append(self.fin_mask4)
+        self.fin_mask.append(self.fin_mask5)
+        self.fin_mask.append(self.fin_mask6)
+        self.my_num = 0
     def __getitem__(self, index):
         ret = {}
         path = self.imgs[index].split(',')
@@ -56,13 +111,22 @@ class InpaintDataset(data.Dataset):
         img = self.tfs(self.loader(path[0]))
 
         #mask 0, 1, 1为mask区域
-        #mask = transforms.ToTensor()(Image.open(path[1]))
-        mask = self.get_mask()
+
+        """
+        mask1 = torch.where(mask <= 0.5, self.zeros, self.ones).byte()
+        mask2 = torch.where(mask < 1, self.ones, self.zeros).byte()
+        
+        mask = mask2 & mask1"""
+        mask = transforms.ToTensor()(Image.open(path[1]))
+        mask3 = torch.where(mask <= 0.95, self.zeros, self.ones).byte()
+        mask = self.fin_mask[self.my_num].byte() | mask3
+        self.my_num += 1
+        self.my_num = self.my_num % 10
 
         #加入噪声后的图片 原图0.5
         cond_image = img*(1. - mask) + mask*torch.randn_like(img)
 
-
+        cond_image = torch.clamp(cond_image, -1, 1)
         #加入白色后的图片 原图0.5
         mask_img = img*(1. - mask) + mask
 
@@ -73,31 +137,22 @@ class InpaintDataset(data.Dataset):
         ret['cond_image'] = cond_image
         ret['mask_image'] = mask_img
         ret['mask'] = mask
-        ret['path'] = path[0][51:55] + '_' + path[1][68:]
+        if self.mask_mode == 'hybrid':
+            ret['path'] = path[0][46:50] + '_' + path[2]
+        else:
+            ret['path'] = path[0][51:55] + '_' + path[2]
         return ret
 
     def __len__(self):
         return len(self.imgs)
 
     def get_mask(self):
-        if self.mask_mode == 'bbox':
-            mask = bbox2mask(self.image_size, random_bbox())
-        elif self.mask_mode == 'center':
-            h, w = self.image_size
-            mask = bbox2mask(self.image_size, (h//4, w//4, h//2, w//2))
-        elif self.mask_mode == 'irregular':
-            mask = get_irregular_mask(self.image_size)
-        elif self.mask_mode == 'free_form':
-            mask = brush_stroke_mask(self.image_size)
-        elif self.mask_mode == 'hybrid':
-            regular_mask = bbox2mask(self.image_size, random_bbox())
-            irregular_mask = brush_stroke_mask(self.image_size, )
-            mask = regular_mask | irregular_mask
-        elif self.mask_mode == 'file':
-            pass
-        else:
-            raise NotImplementedError(
-                f'Mask mode {self.mask_mode} has not been implemented.')
+        self.mask_mode = 'hybrid2'
+
+        regular_mask = bbox2mask(self.image_size, random_bbox())
+        irregular_mask = brush_stroke_mask(self.image_size, )
+        #mask = regular_mask | irregular_mask | brush_stroke_mask(self.image_size, ) | brush_stroke_mask(self.image_size, ) | brush_stroke_mask(self.image_size, )
+        mask = irregular_mask
         return torch.from_numpy(mask).permute(2,0,1)
 
 

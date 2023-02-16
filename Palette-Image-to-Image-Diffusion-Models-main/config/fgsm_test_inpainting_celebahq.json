@@ -48,9 +48,9 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "datasets/celebahq/flist/test.flist",
+                    "data_root": "datasets/celebahq/flist/fgsm_test.flist",
                     "mask_config": {
-                        "mask_mode": "hybrid"
+                        "mask_mode": "free_form"
                     }
                 }
             },

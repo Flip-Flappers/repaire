@@ -122,6 +122,7 @@ class Image_Segment:
                     tmp_c_3 = (self.mean[father1][2] + self.mean[father2][2]) / (self.area_size[father1] + self.area_size[father2])
                     fin_image = self.ori_image * (1 - tmp_mask) + tmp_mask * [tmp_c_1, tmp_c_2, tmp_c_3]
                     tmp_p = PIL.Image.fromarray(np.uint8(fin_image))
+
                     fin_tensor = transforms.ToTensor()(tmp_p).cuda()
                     fin_tensor = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(fin_tensor).unsqueeze(0)
                     out = net(fin_tensor)[0].argmax()
