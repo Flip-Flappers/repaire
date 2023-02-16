@@ -56,7 +56,7 @@ class InpaintDataset(data.Dataset):
 
         for kk in range(3 * 2):
             tmp = torch.zeros([1, 32, 32])
-            k = kk + 2
+            k = kk + 3
             for i in range(32):
                 if i % k < k / 2:
                     for j in range(32):

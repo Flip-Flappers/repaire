@@ -155,7 +155,7 @@ class Palette(BaseModel):
         self.fgsm_ok = 0
         self.fgsm_false = 0
         self.all_num = 0
-        self.big_task = "fgsm"
+        self.big_task = "test"
         if self.big_task == "fgsm":
             self.writer2 = SummaryWriter("run/fgsm")
             self.root = '../../fin_dataset/cifar10/test/fgsm'
@@ -291,6 +291,7 @@ class Palette(BaseModel):
                 self.set_input(phase_data)
                 if self.opt['distributed']:
                     if self.task in ['inpainting', 'uncropping']:
+
                         self.output, self.visuals = self.netG.module.restoration(self.cond_image, y_t=self.cond_image,
                                                                                  y_0=self.gt_image, mask=self.mask,
                                                                                  sample_num=self.sample_num)
@@ -299,7 +300,8 @@ class Palette(BaseModel):
                                                                                  sample_num=self.sample_num)
                 else:
                     if self.task in ['inpainting', 'uncropping']:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image,
+
+                        self.output, self.visuals, bpd = self.netG.restoration(self.cond_image, y_t=self.cond_image,
                                                                           y_0=self.gt_image, mask=self.mask,
                                                                           sample_num=self.sample_num)
                     else:
@@ -352,8 +354,10 @@ class Palette(BaseModel):
                             end += 10
 
                     if key == 'output':
+
                         start = 0
                         end = 10
+
                         for ii in range(all_num):
                             tmp_mae = 0
                             tmp_poss = 0
@@ -412,6 +416,8 @@ class Palette(BaseModel):
                             self.writer2.add_scalar('alert_p', p, global_step=self.all_num)
                             self.writer2.add_scalar('tmp_mae', tmp_mae, global_step=self.all_num)
                             self.writer2.add_scalar('IS', tmp_poss, global_step=self.all_num)
+                            tmp_bpd = bpd[start:end].sum()
+                            self.writer2.add_scalar('tmp_bpd', tmp_bpd, global_step=self.all_num)
                             self.writer2.add_scalar('ssims', ssims, global_step=self.all_num)
                             self.writer2.add_scalar('feature_mse', feature_mse, global_step=self.all_num)
                             if true_label[ii] == 0:
