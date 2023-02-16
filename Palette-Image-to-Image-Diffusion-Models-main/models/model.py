@@ -155,7 +155,7 @@ class Palette(BaseModel):
         self.fgsm_ok = 0
         self.fgsm_false = 0
         self.all_num = 0
-        self.big_task = "test"
+        self.big_task = "fgsm"
         if self.big_task == "fgsm":
             self.writer2 = SummaryWriter("run/fgsm")
             self.root = '../../fin_dataset/cifar10/test/fgsm'

@@ -184,14 +184,14 @@ class Network(BaseNetwork):
             decoder_nll = - discretized_gaussian_log_likelihood(y_0, means=out_mean, log_scales=0.5 * out_log_variance)
             decoder_nll = mean_flat(decoder_nll) / np.log(2.0)
             ans = torch.where((t == 0), decoder_nll, kl)
-            vb.append(ans)
+            vb.append(kl)
 
             if mask is not None:
                 y_t = y_0 * (1. - mask) + mask * y_t
             if i % sample_inter == 0:
                 ret_arr = torch.cat([ret_arr, y_t], dim=0)
         vb = torch.stack(vb, dim=1)
-        return y_t, ret_arr, vb.sum(dim=1)
+        return y_t, ret_arr, decoder_nll
 
     def forward(self, y_0, y_cond=None, mask=None, noise=None):
         # sampling from p(gammas)
