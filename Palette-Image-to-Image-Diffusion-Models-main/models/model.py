@@ -13,7 +13,6 @@ import torchvision.transforms as transforms
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn as nn
 import torch.nn.functional as F
-import lpips
 
 
 def gaussian(window_size, sigma):
@@ -155,7 +154,7 @@ class Palette(BaseModel):
         self.fgsm_ok = 0
         self.fgsm_false = 0
         self.all_num = 0
-        self.big_task = "pgd"
+        self.big_task = "test"
         if self.big_task == "fgsm":
             self.writer2 = SummaryWriter("run/fgsm")
             self.root = '../../fin_dataset/cifar10/test/fgsm'

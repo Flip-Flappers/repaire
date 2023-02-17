@@ -149,7 +149,7 @@ class InpaintDataset(data.Dataset):
         if self.my_num < 10:
             mask = self.fin_mask[self.my_num].byte() | mask3
         else:
-            mask = self.get_my_mask(random.randint(1, 5) / 10, self.window_size[random.randint(0, 2)]).byte() | mask3
+            mask = self.get_my_mask(random.randint(4, 6) / 10, self.window_size[random.randint(0, 2)]).byte() | mask3
 
         self.my_num += 1
         self.my_num = self.my_num % 20
