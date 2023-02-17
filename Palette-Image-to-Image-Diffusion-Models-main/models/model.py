@@ -330,18 +330,18 @@ class Palette(BaseModel):
                 for key, value in self.get_current_visuals(phase='test').items():
 
                     self.writer.add_images(key, value)
-                    all_num = int(value.shape[0] / 10)
+                    all_num = int(value.shape[0] / 20)
                     if key == 'mask':
                         start = 0
-                        end = 10
+                        end = 20
                         for _ in range(all_num):
                             tmp_value = value[start:end]
                             mask.append(tmp_value)
-                            start += 10
-                            end += 10
+                            start += 20
+                            end += 20
                     if key == 'gt_image':
                         start = 0
-                        end = 10
+                        end = 20
 
                         for _ in range(all_num):
                             tmp_value = value[start:end]
@@ -353,13 +353,13 @@ class Palette(BaseModel):
                             true_label.append(true_out_put_label.argmax())
                             gt_image.append(tmp_value)
 
-                            start += 10
-                            end += 10
+                            start += 20
+                            end += 20
 
                     if key == 'output':
 
                         start = 0
-                        end = 10
+                        end = 20
 
                         for ii in range(all_num):
                             tmp_mae = 0
@@ -374,7 +374,7 @@ class Palette(BaseModel):
                             gradcam_mask = transforms.ToTensor()(
                                 PIL.Image.open(self.root + '/gradcam_image/' + '0/' + s + '.png'))
                             gradcam_mask = torch.where(gradcam_mask < 0.5, torch.ones([1, 32, 32]), torch.zeros([1, 32, 32]))
-                            for jj in range(10):
+                            for jj in range(20):
                                 p1 = gt_image[ii][jj] * mask[ii][jj]
 
                                 p2 = tmp_value[jj] * mask[ii][jj]
@@ -424,27 +424,17 @@ class Palette(BaseModel):
                             self.writer2.add_scalar('ssims', ssims, global_step=self.all_num)
                             self.writer2.add_scalar('feature_mse', feature_mse, global_step=self.all_num)
                             if true_label[ii] == 0:
-
-                                if p <= 0.2:
-                                    self.fgsm_false += 1
-                                    print("false " + str(self.all_num) + ' ' + str(p) + ' ')
-                                elif tmp_mae / 10 <= 0.25:
-                                    self.fgsm_false += 1
-                                    print("false " + str(self.all_num) + ' ' + str(p) + ' ')
-                                elif tmp_poss >= 60:
-                                    self.fgsm_ok += 1
-                                    print("ok " + str(self.all_num) + ' ' + str(p) + ' ')
-                                elif (p >= 0.6 or ssims / 10 <= 0.81):
+                                if tmp_bpd / 20 >= 32.55:
                                     self.fgsm_ok += 1
                                     print("ok " + str(self.all_num) + ' ' + str(p) + ' ')
                                 else:
                                     self.fgsm_false += 1
                                     print("false " + str(self.all_num) + ' ' + str(p) + ' ')
-                            self.writer2.add_scalar('fgsm_ok', self.fgsm_ok, global_step=self.all_num)
-                            self.writer2.add_scalar('fgsm_false', self.fgsm_false, global_step=self.all_num)
+                            self.writer2.add_scalar('ok', self.fgsm_ok, global_step=self.all_num)
+                            self.writer2.add_scalar('false', self.fgsm_false, global_step=self.all_num)
 
-                            start += 10
-                            end += 10
+                            start += 20
+                            end += 20
                             self.all_num += 1
                 self.writer.save_images(self.save_current_results())
 

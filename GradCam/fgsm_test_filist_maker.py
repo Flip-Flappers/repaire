@@ -61,7 +61,7 @@ image_list = torch.zeros([num, 2, 3, 32, 32])
 ans_list = torch.zeros([num, 3])
 num = 0
 for i in tqdm(range(ori_picture_num)):
-    for j in range(10):
+    for j in range(20):
         s = "{:04d}".format(i)
         sj = "{:04d}".format(j)
         path = '../../../fin_dataset/cifar10/test/fgsm/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/fgsm/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'

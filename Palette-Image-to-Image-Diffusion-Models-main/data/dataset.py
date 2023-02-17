@@ -103,7 +103,34 @@ class InpaintDataset(data.Dataset):
         self.fin_mask.append(self.fin_mask4)
         self.fin_mask.append(self.fin_mask5)
         self.fin_mask.append(self.fin_mask6)
+        self.window_size = [2, 4, 8]
         self.my_num = 0
+
+
+    def get_my_mask(self, p, window_size):
+        tmp_hang = []
+        p = max(p, 1 / (window_size * window_size))
+
+        for i in range(int(32 / window_size)):
+            now_window = torch.rand([1, window_size, window_size])
+            tmp_num = 0
+            for j in range(int(32 / window_size)):
+                tmp_window = torch.rand([1, window_size, window_size])
+                if tmp_num == 0:
+                    now_window = tmp_window
+                else:
+                    now_window = torch.cat([now_window, tmp_window], dim = 1)
+                tmp_num += 1
+            tmp_hang.append(now_window)
+        fin_window = tmp_hang[0]
+        for i in range(len(tmp_hang)):
+            if i == 0:
+                continue
+            fin_window = torch.cat([fin_window, tmp_hang[i]], dim = 2)
+        fin_window = torch.where(fin_window <= p, torch.ones([1, 32, 32]), torch.zeros([1, 32, 32]))
+        return fin_window
+
+
     def __getitem__(self, index):
         ret = {}
         path = self.imgs[index].split(',')
@@ -119,9 +146,13 @@ class InpaintDataset(data.Dataset):
         mask = mask2 & mask1"""
         mask = transforms.ToTensor()(Image.open(path[1]))
         mask3 = torch.where(mask <= 0.95, self.zeros, self.ones).byte()
-        mask = self.fin_mask[self.my_num].byte() | mask3
+        if self.my_num < 10:
+            mask = self.fin_mask[self.my_num].byte() | mask3
+        else:
+            mask = self.get_my_mask(random.randint(1, 5) / 10, self.window_size[random.randint(0, 2)]).byte() | mask3
+
         self.my_num += 1
-        self.my_num = self.my_num % 10
+        self.my_num = self.my_num % 20
 
         #加入噪声后的图片 原图0.5
         cond_image = img*(1. - mask) + mask*torch.randn_like(img)
