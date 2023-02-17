@@ -39,11 +39,10 @@ label = args.label
 flist = []
 
 
-ori_num_train = [920, 968, 876, 832, 917, 863, 942, 945, 953, 957]
-fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/test.flist", "w")
+fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/pgd_test.flist", "w")
 
 
-root = '../../fin_dataset/cifar10/test'
+root = '../../fin_dataset/cifar10/test/pgd'
 
 
 ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
@@ -64,7 +63,7 @@ for i in tqdm(range(ori_picture_num)):
     for j in range(10):
         s = "{:04d}".format(i)
         sj = "{:04d}".format(j)
-        path = '../../../fin_dataset/cifar10/test/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
+        path = '../../../fin_dataset/cifar10/test/pgd/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/pgd/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
         fo.write(path + '\n')
         # flist.append(path)
 

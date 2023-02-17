@@ -28,25 +28,16 @@ from advertorch.attacks import LinfBasicIterativeAttack, CarliniWagnerL2Attack
 from advertorch.attacks import GradientSignAttack, PGDAttack
 from train_color_dector import Pconv_models
 
-parser = argparse.ArgumentParser(description='1')
-parser.add_argument('--label', type=int)
-parser.add_argument('--attack', type=str)
-parser.add_argument('--target', type=bool)
 
-args = parser.parse_args()
-label = args.label
-attack = args.attack
-target = args.target
-num = 0
 
-trainset = torchvision.datasets.CIFAR10(root='../../root_data', train=False, download=True,
+
+trainset = torchvision.datasets.CIFAR10(root='../../root_data', train=True, download=True,
                                         transform=transforms.ToTensor())
 trainloader = torch.utils.data.DataLoader(trainset, batch_size=1, shuffle=False, num_workers=0)
 
 
-root = '../../fin_dataset/cifar10/test/'
-ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
-ori_picture_num = len(ori_picture)
+root = '../../fin_dataset/cifar10/train/'
+
 
 
 checkpoint = torch.load("../net_T/pre/resnet20_check_point.pth")
@@ -54,16 +45,16 @@ checkpoint = torch.load("../net_T/pre/resnet20_check_point.pth")
 net_R = torch.nn.DataParallel(checkpoint).cuda()
 net_R.eval()
 
+num = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-
-for data in trainloader:
+for data in tqdm(rainloader):
     ori_tensor, labels = data
 
     true_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(ori_tensor.cuda()))[0].argmax()
 
-    if true_label == labels[0] and labels[0] == 0:
-        s = "{:04d}".format(num)
+    if true_label == labels[0]:
+        s = "{:04d}".format(num[true_label])
         image = transforms.ToPILImage()(ori_tensor.squeeze(0))
 
-        image.save(root + 'ori_image/' + str(0) + '/' + s + '.png')
-        num += 1
+        image.save(root + 'ori_image/' + str(int(true_label)) + '/' + s + '.png')
+        num[true_label] += 1

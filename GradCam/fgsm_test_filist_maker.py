@@ -38,7 +38,7 @@ args = parser.parse_args()
 label = args.label
 flist = []
 
-ori_num_train = [479, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
+ori_picture_num = [479, 477, 1143, 1236, 815, 859, 529, 347, 528, 740]
 
 fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/fgsm_test.flist", "w")
 

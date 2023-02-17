@@ -137,7 +137,9 @@ class InpaintDataset(data.Dataset):
         ret['cond_image'] = cond_image
         ret['mask_image'] = mask_img
         ret['mask'] = mask
-        if self.mask_mode == 'hybrid':
+        if self.mask_mode == 'pgd':
+            ret['path'] = path[0][50:54] + '_' + path[2]
+        elif self.mask_mode == 'hybrid':
             ret['path'] = path[0][46:50] + '_' + path[2]
         else:
             ret['path'] = path[0][51:55] + '_' + path[2]

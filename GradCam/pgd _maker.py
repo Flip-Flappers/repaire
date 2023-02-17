@@ -65,15 +65,15 @@ elif attack == 'PGD':
         adversary = PGDAttack(
             net_R,
             loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-            eps=7 / 255,
-            nb_iter=10, eps_iter=150 / 255 / 5, clip_min=0, clip_max=1.0,
-            targeted=target)
+            eps=4 / 255,
+            nb_iter=10, eps_iter=4 / 255 / 5, clip_min=0, clip_max=1.0,
+            targeted=False)
     else:
         adversary = PGDAttack(
             net_R,
             loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-            eps=8 / 255,
-            nb_iter=10, eps_iter=150 / 255 / 5, clip_min=0, clip_max=1.0,
+            eps=4 / 255,
+            nb_iter=10, eps_iter=4 / 255 / 5, clip_min=0, clip_max=1.0,
             targeted=False)
     # FGSM
 elif attack == 'FGSM':
@@ -112,5 +112,5 @@ for data in tqdm(trainloader):
         fin_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(tmp_fgsm_image))[0].argmax()
         if fin_label != true_label:
             s = "{:04d}".format(num[fin_label])
-            fgsm_image.save(root + 'fgsm/ori_image/' + str(int(fin_label)) + '/' + s + '.png')
+            fgsm_image.save(root + 'pgd/ori_image/' + str(int(fin_label)) + '/' + s + '.png')
             num[fin_label] += 1
