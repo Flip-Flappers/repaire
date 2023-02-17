@@ -150,7 +150,7 @@ class InpaintDataset(data.Dataset):
             mask = self.fin_mask[self.my_num].byte() | mask3
         else:
             mask = self.get_my_mask(random.randint(4, 6) / 10, self.window_size[random.randint(0, 2)]).byte() | mask3
-
+        mask = self.get_mask()
         self.my_num += 1
         self.my_num = self.my_num % 20
 
@@ -185,7 +185,7 @@ class InpaintDataset(data.Dataset):
         regular_mask = bbox2mask(self.image_size, random_bbox())
         irregular_mask = brush_stroke_mask(self.image_size, )
         #mask = regular_mask | irregular_mask | brush_stroke_mask(self.image_size, ) | brush_stroke_mask(self.image_size, ) | brush_stroke_mask(self.image_size, )
-        mask = irregular_mask
+        mask = irregular_mask | irregular_mask
         return torch.from_numpy(mask).permute(2,0,1)
 
 
