@@ -36,37 +36,39 @@ parser = argparse.ArgumentParser(description='1')
 parser.add_argument('--label', type=int)
 args = parser.parse_args()
 label = args.label
-flist = []
-
-ori_picture_num = [479, 477, 1143, 1236, 815, 859, 529, 347, 528, 740]
-
 fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/fgsm_test.flist", "w")
+for label in range(10):
+    flist = []
+
+    ori_picture_num = [479, 477, 1143, 1236, 815, 859, 529, 347, 528, 740]
 
 
-root = '../../fin_dataset/cifar10/test/fgsm'
 
 
-ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
-ori_picture_num = len(ori_picture)
-mask = []
-for i in range(ori_picture_num):
-    s = "{:04d}".format(i)
-    mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
+    root = '../../fin_dataset/cifar10/test/fgsm'
 
-num = 0
-for i in tqdm(range(ori_picture_num)):
-    for j in range(len(mask[i])):
-        num += 1
-image_list = torch.zeros([num, 2, 3, 32, 32])
-ans_list = torch.zeros([num, 3])
-num = 0
-for i in tqdm(range(ori_picture_num)):
-    for j in range(20):
+
+    ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
+    ori_picture_num = len(ori_picture)
+    mask = []
+    for i in range(ori_picture_num):
         s = "{:04d}".format(i)
-        sj = "{:04d}".format(j)
-        path = '../../../fin_dataset/cifar10/test/fgsm/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/fgsm/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
-        fo.write(path + '\n')
-        # flist.append(path)
+        mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
 
-# print(flist)
+    num = 0
+    for i in tqdm(range(ori_picture_num)):
+        for j in range(len(mask[i])):
+            num += 1
+    image_list = torch.zeros([num, 2, 3, 32, 32])
+    ans_list = torch.zeros([num, 3])
+    num = 0
+    for i in tqdm(range(ori_picture_num)):
+        for j in range(20):
+            s = "{:04d}".format(i)
+            sj = "{:04d}".format(j)
+            path = '../../../fin_dataset/cifar10/test/fgsm/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/fgsm/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
+            fo.write(path + '\n')
+            # flist.append(path)
+
+    # print(flist)
 fo.close()

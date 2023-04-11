@@ -154,7 +154,7 @@ class Palette(BaseModel):
         self.fgsm_ok = 0
         self.fgsm_false = 0
         self.all_num = 0
-        self.big_task = "pgd"
+        self.big_task = "fgsm"
         if self.big_task == "fgsm":
             self.writer2 = SummaryWriter("run/fgsm")
             self.root = '../../fin_dataset/cifar10/test/fgsm'
@@ -329,18 +329,18 @@ class Palette(BaseModel):
                 for key, value in self.get_current_visuals(phase='test').items():
 
                     self.writer.add_images(key, value)
-                    all_num = int(value.shape[0] / 20)
+                    all_num = int(value.shape[0] / 10)
                     if key == 'mask':
                         start = 0
-                        end = 20
+                        end = 10
                         for _ in range(all_num):
                             tmp_value = value[start:end]
                             mask.append(tmp_value)
-                            start += 20
-                            end += 20
+                            start += 10
+                            end += 10
                     if key == 'gt_image':
                         start = 0
-                        end = 20
+                        end = 10
 
                         for _ in range(all_num):
                             tmp_value = value[start:end]
@@ -352,13 +352,13 @@ class Palette(BaseModel):
                             true_label.append(true_out_put_label.argmax())
                             gt_image.append(tmp_value)
 
-                            start += 20
-                            end += 20
+                            start += 10
+                            end += 10
 
                     if key == 'output':
 
                         start = 0
-                        end = 20
+                        end = 10
 
                         for ii in range(all_num):
                             tmp_mae = 0
@@ -366,44 +366,13 @@ class Palette(BaseModel):
                             ssims = 0
 
                             tmp_value = value[start:end]
-                            s = "{:04d}".format(self.all_num)
-                            color_mask_loc = (sorted(glob.glob(
-                                os.path.join(self.root, 'color_edge_image/' + str(0) + '/' + s) + '/*.*')))
 
-                            gradcam_mask = transforms.ToTensor()(
-                                PIL.Image.open(self.root + '/gradcam_image/' + '0/' + s + '.png'))
-                            gradcam_mask = torch.where(gradcam_mask < 0.5, torch.ones([1, 32, 32]), torch.zeros([1, 32, 32]))
-                            for jj in range(20):
+                            for jj in range(10):
                                 p1 = gt_image[ii][jj] * mask[ii][jj]
-
                                 p2 = tmp_value[jj] * mask[ii][jj]
                                 tmp_mae += nn.L1Loss()(p1, p2)
                                 ssims += ssim(gt_image[ii][jj].unsqueeze(0), tmp_value[jj].unsqueeze(0), val_range=255)
 
-
-                                """for zz in range(len(color_mask_loc)):
-                                    color_mask_image = PIL.Image.open(color_mask_loc[zz])
-                                    color_mask_tensor = transforms.ToTensor()(color_mask_image).int() & gradcam_mask.int()
-                                    if self.big_task == "fgsm":
-                                        tmp_color = color_mask_loc[zz][65:][:-4].split('_')
-                                    else:
-                                        tmp_color = color_mask_loc[zz][60:][:-4].split('_')
-                                    avg = tmp_color[0][1:][:-1].split('.')[:-1]
-                                    c1 = torch.tensor(int(avg[0])) / 255
-                                    c2 = torch.tensor(int(avg[1])) / 255
-                                    c3 = torch.tensor(int(avg[2])) / 255
-                                    fin_mask_tensor = torch.cat([color_mask_tensor, color_mask_tensor], dim=0)
-                                    fin_mask_tensor = torch.cat([fin_mask_tensor, color_mask_tensor], dim=0)
-                                    anti_mask_image = 1 - fin_mask_tensor
-
-
-                                    fin_mask_tensor = torch.cat([color_mask_tensor.float() * c1, color_mask_tensor.float() * c2], dim=0)
-                                    fin_mask_tensor = torch.cat([fin_mask_tensor, color_mask_tensor.float() * c3], dim=0)
-
-                                    tmp_value[jj] = tmp_value[jj] * anti_mask_image + fin_mask_tensor"""
-
-
-                            self.writer2.add_images('fin_img', tmp_value, global_step=self.all_num)
                             out_put_label, features = self.net_V(
                                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(tmp_value))
                             out_put_label = out_put_label.detach()
@@ -415,25 +384,24 @@ class Palette(BaseModel):
                                 if out_put_label[j].argmax() != 0:
                                     num += 1
                             p = num / out_put_label.shape[0]
-                            self.writer2.add_scalar('alert_p', p, global_step=self.all_num)
-                            self.writer2.add_scalar('tmp_mae', tmp_mae, global_step=self.all_num)
-                            self.writer2.add_scalar('IS', tmp_poss, global_step=self.all_num)
                             tmp_bpd = bpd[start:end].sum()
-                            self.writer2.add_scalar('tmp_bpd', tmp_bpd, global_step=self.all_num)
-                            self.writer2.add_scalar('ssims', ssims, global_step=self.all_num)
-                            self.writer2.add_scalar('feature_mse', feature_mse, global_step=self.all_num)
-                            if true_label[ii] == 0:
-                                if tmp_bpd / 20 >= 32.55:
-                                    self.fgsm_ok += 1
-                                    print("ok " + str(self.all_num) + ' ' + str(p) + ' ')
-                                else:
-                                    self.fgsm_false += 1
-                                    print("false " + str(self.all_num) + ' ' + str(p) + ' ')
-                            self.writer2.add_scalar('ok', self.fgsm_ok, global_step=self.all_num)
-                            self.writer2.add_scalar('false', self.fgsm_false, global_step=self.all_num)
+                            if self.all_num % 2 == 1:
+                                self.writer2.add_scalar('rand/alert_p', p, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('rand/tmp_mae', tmp_mae, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('rand/IS', tmp_poss, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('rand/tmp_bpd', tmp_bpd, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('rand/ssims', ssims, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('rand/feature_mse', feature_mse, global_step=int(self.all_num / 2))
+                            else:
+                                self.writer2.add_scalar('chess/alert_p', p, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('chess/tmp_mae', tmp_mae, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('chess/IS', tmp_poss, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('chess/tmp_bpd', tmp_bpd,global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('chess/ssims', ssims, global_step=int(self.all_num / 2))
+                                self.writer2.add_scalar('chess/feature_mse', feature_mse, global_step=int(self.all_num / 2))
 
-                            start += 20
-                            end += 20
+                            start += 10
+                            end += 10
                             self.all_num += 1
                 self.writer.save_images(self.save_current_results())
 

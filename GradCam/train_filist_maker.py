@@ -36,37 +36,40 @@ parser = argparse.ArgumentParser(description='1')
 parser.add_argument('--label', type=int)
 args = parser.parse_args()
 label = args.label
-flist = []
-
-ori_num_train = [4998, 4998, 4985, 5007, 5001, 4999, 5002, 5004, 5001, 5005]
-
-fo = open("./train.flist", "w")
-
-
-root = '../../fin_dataset/cifar10/train'
+ori_num_train = [4990, 4996, 4981, 4978, 4991, 4980, 4991, 4998, 4995, 4996]
+fo = open("./train_" + ".flist", "w")
+for label in range(10):
+    flist = []
 
 
-ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
-ori_picture_num = len(ori_picture)
-mask = []
-for i in range(ori_picture_num):
-    s = "{:04d}".format(i)
-    mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
 
-num = 0
-for i in tqdm(range(ori_picture_num)):
-    for j in range(len(mask[i])):
-        num += 1
-image_list = torch.zeros([num, 2, 3, 32, 32])
-ans_list = torch.zeros([num, 3])
-num = 0
-for i in tqdm(range(ori_picture_num)):
-    for j in range(len(mask[i])):
+
+
+
+    root = '../../fin_dataset/cifar10/train'
+
+
+    ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
+    ori_picture_num = len(ori_picture)
+    mask = []
+    for i in range(ori_picture_num):
         s = "{:04d}".format(i)
-        sj = "{:04d}".format(j)
-        path = '../../../fin_dataset/cifar10/train/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/train/diff_color_edge_image/' + str(label) + '/' + s  + '/' + sj +'.png'
+        mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
+
+    num = 0
+    for i in tqdm(range(ori_picture_num)):
+        for j in range(len(mask[i])):
+            num += 1
+    image_list = torch.zeros([num, 2, 3, 32, 32])
+    ans_list = torch.zeros([num, 3])
+    num = 0
+    for i in tqdm(range(ori_picture_num)):
+
+        s = "{:04d}".format(i)
+        sj = "{:04d}".format(i)
+        path = '../../../fin_dataset/cifar10/train/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/train/gradcam_image/' + str(label) + '/' + s  + '/' + sj +'.png' + ',' + sj + '.png'
         fo.write(path + '\n')
         # flist.append(path)
 
-# print(flist)
+    # print(flist)
 fo.close()

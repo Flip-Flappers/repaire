@@ -39,7 +39,7 @@ label = args.label
 flist = []
 
 
-fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/pgd_test.flist", "w")
+fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/" + str(label) + "/pgd_test.flist", "w")
 
 
 root = '../../fin_dataset/cifar10/test/pgd'

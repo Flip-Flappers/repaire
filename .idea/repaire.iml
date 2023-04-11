@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="PYTHON_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/Color_Train" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/GradCam" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/train_color_dector" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Palette-Image-to-Image-Diffusion-Models-main" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Palette-Image-to-Image-Diffusion-Models-main/core" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Palette-Image-to-Image-Diffusion-Models-main/models" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Palette-Image-to-Image-Diffusion-Models-main/models/guided_diffusion_modules" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/draw" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+  <component name="PyDocumentationSettings">
+    <option name="renderExternalDocumentation" value="true" />
+  </component>
+</module>

@@ -4,6 +4,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
 
 from .nn import (
     checkpoint,
@@ -315,7 +316,7 @@ class QKVAttention(nn.Module):
     def count_flops(model, _x, y):
         return count_flops_attn(model, _x, y)
 
-class UNet(nn.Module):
+class  UNet(nn.Module):
     """
     The full UNet model with attention and embedding.
     :param in_channel: channels in the input Tensor, for image colorization : Y_channels + X_channels .
@@ -522,6 +523,10 @@ class UNet(nn.Module):
             zero_module(nn.Conv2d(input_ch, out_channel, 3, padding=1)),
         )
 
+        self.net_T = torch.load("../net_T/pre/resnet20_check_point.pth")
+
+        self.net_T_fc = nn.Linear(128, 64)
+
     def forward(self, x, gammas):
         """
         Apply the model to an input batch.
@@ -531,7 +536,19 @@ class UNet(nn.Module):
         """
         hs = []
         gammas = gammas.view(-1, )
-        emb = self.cond_embed(gamma_embedding(gammas, self.inner_channel))
+        tmp_emb = gamma_embedding(gammas, self.inner_channel)
+
+        with torch.no_grad():
+            emb2 = self.net_T(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(torch.chunk(x, 2, dim=1)[0] / 2 + 0.5))[1].squeeze(2).squeeze(2)
+
+
+        fin_emb = torch.cat([tmp_emb, emb2], 1)
+        tmp_emb = self.net_T_fc(fin_emb)
+
+        emb = self.cond_embed(tmp_emb)
+
+
+
 
         h = x.type(torch.float32)
         for module in self.input_blocks:
@@ -545,7 +562,7 @@ class UNet(nn.Module):
         return self.out(h)
 
 if __name__ == '__main__':
-    b, c, h, w = 3, 6, 64, 64
+    b, c, h, w = 3, 6, 32, 32
     timsteps = 100
     model = UNet(
         image_size=h,
@@ -558,3 +575,4 @@ if __name__ == '__main__':
     x = torch.randn((b, c, h, w))
     emb = torch.ones((b, ))
     out = model(x, emb)
+    print(model)
