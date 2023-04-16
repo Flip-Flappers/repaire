@@ -104,11 +104,11 @@ class ResNet(nn.Module):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
-        out = self.layer3(out)
-        out1 = F.avg_pool2d(out, out.size()[3])
+        out2 = self.layer3(out)
+        out1 = F.avg_pool2d(out2, out2.size()[3])
         out = out1.view(out.size(0), -1)
         out = self.linear(out)
-        return out
+        return out, out2
 
 
 def resnet20():

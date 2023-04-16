@@ -524,8 +524,24 @@ class  UNet(nn.Module):
         )
 
         self.net_T = torch.load("../net_T/pre/resnet20_check_point.pth")
+        self.net_T_conv = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.02),
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.02),
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.02),
+            nn.AvgPool2d(2)
+        )
+        self.net_T_fc = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.LeakyReLU(0.2),
+            nn.Linear(64, 64)
+        )
 
-        self.net_T_fc = nn.Linear(128, 64)
 
     def forward(self, x, gammas):
         """
@@ -541,7 +557,7 @@ class  UNet(nn.Module):
         with torch.no_grad():
             emb2 = self.net_T(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(torch.chunk(x, 2, dim=1)[0] / 2 + 0.5))[1].squeeze(2).squeeze(2)
 
-
+        emb2 = self.net_T_conv(emb2).squeeze(2).squeeze(2)
         fin_emb = torch.cat([tmp_emb, emb2], 1)
         tmp_emb = self.net_T_fc(fin_emb)
 
