@@ -227,6 +227,17 @@ class Palette(BaseModel):
         for train_data in tqdm.tqdm(self.phase_loader):
             self.set_input(train_data)
             self.optG.zero_grad()
+
+            tmp = self.gt_image[0] / 2 + 0.5
+            tmp = transforms.ToPILImage()(tmp)
+            tmp.show()
+            tmp = self.cond_image[0] / 2 + 0.5
+            tmp = transforms.ToPILImage()(tmp)
+            tmp.show()
+            tmp = self.mask[0] / 2 + 0.5
+            tmp = transforms.ToPILImage()(tmp)
+            tmp.show()
+
             loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
             loss.backward()
             self.optG.step()

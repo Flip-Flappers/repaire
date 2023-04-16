@@ -10,6 +10,8 @@
       <sourceFolder url="file://$MODULE_DIR$/Palette-Image-to-Image-Diffusion-Models-main/models" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Palette-Image-to-Image-Diffusion-Models-main/models/guided_diffusion_modules" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/draw" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/DiffPure-master" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/GuidedDiffusionPur-main" isTestSource="false" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
