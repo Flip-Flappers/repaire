@@ -1,3 +1,4 @@
+import csv
 import glob
 import math
 import os
@@ -154,7 +155,7 @@ class Palette(BaseModel):
         self.fgsm_ok = 0
         self.fgsm_false = 0
         self.all_num = 0
-        self.big_task = "fgsm"
+        self.big_task = "test"
         if self.big_task == "fgsm":
             self.writer2 = SummaryWriter("run/fgsm")
             self.root = '../../fin_dataset/cifar10/test/fgsm'
@@ -291,6 +292,11 @@ class Palette(BaseModel):
         self.netG.eval()
         self.test_metrics.reset()
 
+        filename = 'test_result.cvs'
+        #create a cvs
+        
+        tmp_ans = torch.zeros([1000 * 10, 10])
+        my_num = 0
         with torch.no_grad():
             for phase_data in tqdm.tqdm(self.phase_loader):
                 self.set_input(phase_data)
@@ -388,33 +394,36 @@ class Palette(BaseModel):
                                     num += 1
                             p = num / out_put_label.shape[0]
                             tmp_bpd = bpd[start:end].sum()
-                            if self.all_num % 2 == 1:
-                                self.writer2.add_scalar('rand/alert_p', p, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('rand/tmp_mae', tmp_mae, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('rand/IS', tmp_poss, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('rand/tmp_bpd', tmp_bpd, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('rand/ssims', ssims, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('rand/feature_mse', feature_mse, global_step=int(self.all_num / 2))
-                            else:
-                                self.writer2.add_scalar('chess/alert_p', p, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('chess/tmp_mae', tmp_mae, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('chess/IS', tmp_poss, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('chess/tmp_bpd', tmp_bpd,global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('chess/ssims', ssims, global_step=int(self.all_num / 2))
-                                self.writer2.add_scalar('chess/feature_mse', feature_mse, global_step=int(self.all_num / 2))
+
+                            self.writer2.add_scalar('rand/alert_p', p, global_step=int(self.all_num / 2))
+                            self.writer2.add_scalar('rand/tmp_mae', tmp_mae, global_step=int(self.all_num / 2))
+                            self.writer2.add_scalar('rand/IS', tmp_poss, global_step=int(self.all_num / 2))
+                            self.writer2.add_scalar('rand/tmp_bpd', tmp_bpd, global_step=int(self.all_num / 2))
+                            self.writer2.add_scalar('rand/ssims', ssims, global_step=int(self.all_num / 2))
+                            self.writer2.add_scalar('rand/feature_mse', feature_mse, global_step=int(self.all_num / 2))
+
+                            tmp_ans[my_num][0] = true_label[ii]
+                            tmp_ans[my_num][1] = tmp_mae
+                            tmp_ans[my_num][2] = tmp_poss
+                            tmp_ans[my_num][3] = tmp_bpd
+                            tmp_ans[my_num][4] = ssims
+                            tmp_ans[my_num][5] = feature_mse
+                            my_num += 1
+
 
                             start += 10
                             end += 10
                             self.all_num += 1
-                self.writer.save_images(self.save_current_results())
+                    self.writer.save_images(self.save_current_results())
+                torch.save(tmp_ans, 'test_result.pt')
+            test_log = self.test_metrics.result()
+            ''' save logged informations into log dict '''
+            test_log.update({'epoch': self.epoch, 'iters': self.iter})
 
-        test_log = self.test_metrics.result()
-        ''' save logged informations into log dict '''
-        test_log.update({'epoch': self.epoch, 'iters': self.iter})
-
-        ''' print logged informations to the screen and tensorboard '''
-        for key, value in test_log.items():
-            self.logger.info('{:5s}: {}\t'.format(str(key), value))
+            ''' print logged informations to the screen and tensorboard '''
+            for key, value in test_log.items():
+                self.logger.info('{:5s}: {}\t'.format(str(key), value))
+        
 
     def load_networks(self):
         """ save pretrained model and training state, which only do on GPU 0. """

@@ -1,7 +1,7 @@
 {
-    "name": "inpainting_celebahq", // experiments name
+    "name": "colorization_celebahq", // experiments name
     "gpu_ids": [0], // gpu ids list, default is single 0
-    "seed" : -1, // random seed, seed <0 represents randomization not used 
+    "seed" : -1, // random seed, seed <0 represents randomization not used
     "finetune_norm": false, // find the parameters to optimize
 
     "path": { //set every part file path
@@ -10,26 +10,24 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        "resume_state": "experiments/test/checkpoint/inpainting/250"
+        "resume_state": null
         // "resume_state": null // ex: 100, loading .state  and .pth from given epoch and iteration
     },
 
     "datasets": { // train or test
-        "train": { 
-            "which_dataset": {  // import designated dataset using arguments 
-                "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
+        "train": {
+            "which_dataset": {  // import designated dataset using arguments
+                "name": ["data.dataset", "ColorizationDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "datasets/celebahq/flist/1/train.flist",
-                    "data_len": -1,
-                    "mask_config": {
-                        "mask_mode": "test"
-                    }
-                } 
+                    "data_root": "",
+                    "data_flist": "datasets/celebahq/flist/train_.flist",
+                    "data_len": -1
+                }
             },
             "dataloader":{
-                "validation_split": 2, // percent or number 
+                "validation_split": 2, // percent or number
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 1, // batch size in each gpu
+                    "batch_size": 100, // batch size in each gpu
                     "num_workers": 0,
                     "shuffle": true,
                     "pin_memory": true,
@@ -44,14 +42,12 @@
                 }
             }
         },
-        "test": { 
+        "test": {
             "which_dataset": {
-                "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
+                "name": "ColorizationDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "datasets/celebahq/flist/test.flist",
-                    "mask_config": {
-                        "mask_mode": "test"
-                    }
+                    "data_root": "",
+                    "data_flist": "datasets/celebahq/flist/test.flist"
                 }
             },
             "dataloader":{
@@ -65,11 +61,11 @@
     },
 
     "model": { // networks/metrics/losses/optimizers/lr_schedulers is a list and model is a dict
-        "which_model": { // import designated  model(trainer) using arguments 
+        "which_model": { // import designated  model(trainer) using arguments
             "name": ["models.model", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
             "args": {
                 "sample_num": 8, // process of each image
-                "task": "inpainting",
+                "task": "colorization",
                 "ema_scheduler": {
                     "ema_start": 1,
                     "ema_iter": 1,
@@ -79,10 +75,10 @@
                     { "lr": 5e-5, "weight_decay": 0}
                 ]
             }
-        }, 
+        },
         "which_networks": [ // import designated list of networks using arguments
             {
-                "name": ["models.network", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py]) 
+                "name": ["models.network", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py])
                 "args": { // arguments to initialize network
                     "init_type": "kaiming", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
                     "module_name": "guided_diffusion", // sr3 | guided_diffusion
@@ -137,11 +133,11 @@
         "n_epoch": 1e8, // max epochs, not limited now
         "n_iter": 1e8, // max interations
         "val_epoch": 5, // valdation every specified number of epochs
-        "save_checkpoint_epoch": 1,
+        "save_checkpoint_epoch": 10,
         "log_iter": 1e3, // log every specified number of iterations
         "tensorboard" : true // tensorboardX enable
     },
-    
+
     "debug": { // arguments in debug mode, which will replace arguments in train
         "val_epoch": 1,
         "save_checkpoint_epoch": 1,

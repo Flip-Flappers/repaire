@@ -171,7 +171,7 @@ class InpaintDataset(data.Dataset):
             ret['path'] = path[0][51:55] + '_' + path[2]
         elif self.mask_mode == 'fgsm':
             ret['path'] = path[0][51:55] + '_' + path[2]
-        elif self.mask_mode == 'hybrid2':
+        elif self.mask_mode == 'test':
             ret['path'] = path[0][47:51] + '_' + path[2]
         return ret
 
@@ -179,7 +179,7 @@ class InpaintDataset(data.Dataset):
         return len(self.imgs)
 
     def get_mask(self):
-        self.mask_mode = 'hybrid2'
+
 
         regular_mask = bbox2mask(self.image_size, random_bbox())
         irregular_mask = brush_stroke_mask(self.image_size, )
