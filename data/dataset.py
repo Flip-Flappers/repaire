@@ -242,7 +242,7 @@ class UncroppingDataset(data.Dataset):
 
 
 class ColorizationDataset(data.Dataset):
-    def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=pil_loader):
+    def __init__(self, data_root, data_flist, data_len=-1, image_size=[32, 32], loader=pil_loader):
         self.data_root = data_root
         flist = make_dataset(data_flist)
         if data_len > 0:
@@ -260,9 +260,9 @@ class ColorizationDataset(data.Dataset):
     def __getitem__(self, index):
         ret = {}
         file_name = str(self.flist[index]).zfill(5) + '.png'
-
-        img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'color', file_name)))
-        cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'gray', file_name)))
+        ori_image_file_name = file_name.split(",", 1)
+        img = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0])))
+        cond_image = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0][:35] + "ori_image" + ori_image_file_name[0][44:])))
 
         ret['gt_image'] = img
         ret['cond_image'] = cond_image
