@@ -13,7 +13,7 @@
       <sourceFolder url="file://$MODULE_DIR$/DiffPure-master" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/GuidedDiffusionPur-main" isTestSource="false" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="AAAI" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

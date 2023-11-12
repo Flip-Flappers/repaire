@@ -39,33 +39,34 @@ label = args.label
 flist = []
 
 
-fo = open("../Palette-Image-to-Image-Diffusion-Models-main/datasets/celebahq/flist/" + str(label) + "/pgd_test.flist", "w")
+fo = open("./pgd_success_test.flist", "w")
+
+for label in range(10):
+    root = '../../fin_dataset/cifar10/test/pgd'
 
 
-root = '../../fin_dataset/cifar10/test/pgd'
-
-
-ori_picture = sorted(glob.glob(os.path.join(root, 'ori_image/' + str(label)) + '/*.*'))
-ori_picture_num = len(ori_picture)
-mask = []
-for i in range(ori_picture_num):
-    s = "{:04d}".format(i)
-    mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
-
-num = 0
-for i in tqdm(range(ori_picture_num)):
-    for j in range(len(mask[i])):
-        num += 1
-image_list = torch.zeros([num, 2, 3, 32, 32])
-ans_list = torch.zeros([num, 3])
-num = 0
-for i in tqdm(range(ori_picture_num)):
-    for j in range(20):
+    ori_picture = sorted(glob.glob(os.path.join(root, 'success/' + str(label)) + '/*.*'))
+    ori_picture_num = len(ori_picture)
+    mask = []
+    for i in range(ori_picture_num):
         s = "{:04d}".format(i)
-        sj = "{:04d}".format(j)
-        path = '../../../fin_dataset/cifar10/test/pgd/ori_image/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/pgd/gradcam_image/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
-        fo.write(path + '\n')
-        # flist.append(path)
+        mask.append(sorted(glob.glob(os.path.join(root, 'color_edge_image/' + str(label) + '/' + s) + '/*.*')))
+
+    num = 0
+    for i in tqdm(range(ori_picture_num)):
+        for j in range(len(mask[i])):
+            num += 1
+    image_list = torch.zeros([num, 2, 3, 32, 32])
+    ans_list = torch.zeros([num, 3])
+    num = 0
+    for i in range(200):
+        now_i = random.randint(0, ori_picture_num - 1)
+        for j in range(10):
+            s = "{:04d}".format(i)
+            sj = "{:04d}".format(j)
+            path = '../../../fin_dataset/cifar10/test/pgd/success/' + str(label) + '/' + s +'.png' + ',' + '../../../fin_dataset/cifar10/test/pgd/success/' + str(label) + '/' + s  +'.png' + ',' + sj + '.png'
+            fo.write(path + '\n')
+            # flist.append(path)
 
 # print(flist)
 fo.close()

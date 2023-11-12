@@ -106,9 +106,10 @@ class ResNet(nn.Module):
         out = self.layer2(out)
         out2 = self.layer3(out)
         out1 = F.avg_pool2d(out2, out2.size()[3])
-        out = out1.view(out.size(0), -1)
+        out = out1.view(out1.size(0), -1)
         out = self.linear(out)
         return out, out2
+        # return out
 
 
 def resnet20():
@@ -146,6 +147,7 @@ def test(net):
 
 
 if __name__ == "__main__":
+    resnet20()(torch.ones([1, 3, 32 ,32]))
     for net_name in __all__:
         if net_name.startswith('resnet'):
             print(net_name)

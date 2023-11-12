@@ -24,7 +24,7 @@ class EmbedBlock(nn.Module):
     """
 
     @abstractmethod
-    def forward(self, x, emb):
+    def forward(self, x, emb, emb_img):
         """
         Apply the module to `x` given `emb` embeddings.
         """
@@ -35,10 +35,10 @@ class EmbedSequential(nn.Sequential, EmbedBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, emb):
+    def forward(self, x, emb, emb_img):
         for layer in self:
             if isinstance(layer, EmbedBlock):
-                x = layer(x, emb)
+                x = layer(x, emb, emb_img)
             else:
                 x = layer(x)
         return x
@@ -152,6 +152,13 @@ class ResBlock(EmbedBlock):
                 2 * self.out_channel if use_scale_shift_norm else self.out_channel,
             ),
         )
+        self.emb_layers_img = nn.Sequential(
+            SiLU(),
+            nn.Linear(
+                1024,
+                2 * self.out_channel if use_scale_shift_norm else self.out_channel,
+            ),
+        )
         self.out_layers = nn.Sequential(
             normalization(self.out_channel),
             SiLU(),
@@ -160,6 +167,16 @@ class ResBlock(EmbedBlock):
                 nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
             ),
         )
+
+        self.out_layers_img = nn.Sequential(
+            normalization(self.out_channel),
+            SiLU(),
+            nn.Dropout(p=dropout),
+            zero_module(
+                nn.Conv2d(self.out_channel, self.out_channel, 3, padding=1)
+            ),
+        )
+
 
         if self.out_channel == channels:
             self.skip_connection = nn.Identity()
@@ -170,7 +187,7 @@ class ResBlock(EmbedBlock):
         else:
             self.skip_connection = nn.Conv2d(channels, self.out_channel, 1)
 
-    def forward(self, x, emb):
+    def forward(self, x, emb, img_emb):
         """
         Apply the block to a Tensor, conditioned on a embedding.
         :param x: an [N x C x ...] Tensor of features.
@@ -178,10 +195,10 @@ class ResBlock(EmbedBlock):
         :return: an [N x C x ...] Tensor of outputs.
         """
         return checkpoint(
-            self._forward, (x, emb), self.parameters(), self.use_checkpoint
+            self._forward, (x, emb, img_emb), self.parameters(), self.use_checkpoint
         )
 
-    def _forward(self, x, emb):
+    def _forward(self, x, emb, img_emb):
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = in_rest(x)
@@ -191,15 +208,28 @@ class ResBlock(EmbedBlock):
         else:
             h = self.in_layers(x)
         emb_out = self.emb_layers(emb).type(h.dtype)
+        emb_out_img = self.emb_layers_img(img_emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
+        while len(emb_out_img.shape) < len(h.shape):
+            emb_out_img = emb_out_img[..., None]
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
             scale, shift = torch.chunk(emb_out, 2, dim=1)
-            h = out_norm(h) * (1 + scale) + shift
+
+            scale_img, shift_img = torch.chunk(emb_out_img, 2, dim=1)
+
+            h = out_norm(h) * (1 + scale ) + shift
             h = out_rest(h)
+
+            out_norm_img, out_rest_img = self.out_layers_img[0], self.out_layers_img[1:]
+            h = out_norm_img(h) * (1 + scale_img) + shift_img
+            h = out_rest_img(h)
         else:
             h = h + emb_out
+
+            h = h + emb_out_img
+
             h = self.out_layers(h)
         return self.skip_connection(x) + h
 
@@ -536,14 +566,28 @@ class  UNet(nn.Module):
             nn.LeakyReLU(0.02),
             nn.AvgPool2d(2)
         )
-        self.net_T_fc = nn.Sequential(
-            nn.Linear(128, 64),
-            nn.LeakyReLU(0.2),
-            nn.Linear(64, 64)
+        self.net_T_conv2 = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.02),
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.02),
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.02),
+            nn.AvgPool2d(2)
         )
+        self.net_T_fc = nn.Sequential(
+            nn.Linear(64 * 3, 64),
+            nn.LeakyReLU(0.2),
+            nn.Linear(64, 64),
+            nn.Tanh()
+        )
+        self.now_step = 0
 
 
-    def forward(self, x, gammas):
+    def forward(self, x, gammas, y_0):
         """
         Apply the model to an input batch.
         :param x: an [N x 2 x ...] Tensor of inputs (B&W)
@@ -552,29 +596,33 @@ class  UNet(nn.Module):
         """
         hs = []
         gammas = gammas.view(-1, )
-        tmp_emb = gamma_embedding(gammas, self.inner_channel)
+        emb = self.cond_embed(gamma_embedding(gammas, self.inner_channel))
 
+        # 作为一个嵌入
         with torch.no_grad():
-            emb2 = self.net_T(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(torch.chunk(x, 2, dim=1)[0] / 2 + 0.5))[1].squeeze(2).squeeze(2)
+            emb_img = self.net_T(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(y_0 / 2 + 0.5))[
+                1].squeeze(2).squeeze(2)
 
-        emb2 = self.net_T_conv(emb2).squeeze(2).squeeze(2)
-        fin_emb = torch.cat([tmp_emb, emb2], 1)
-        tmp_emb = self.net_T_fc(fin_emb)
+            emb_img = nn.MaxPool2d([2, 2])(emb_img).view(emb_img.shape[0], -1)
 
-        emb = self.cond_embed(tmp_emb)
+            rows_to_zero = torch.randperm(emb_img.shape[0])[:emb_img.shape[0] // 2]
+            emb_img[rows_to_zero] = 0
+        if self.now_step % 2 == 1:
+            emb_img = torch.zeros(emb_img.shape).cuda()
 
-
-
+        self.now_step = (self.now_step + 1) % 2
 
         h = x.type(torch.float32)
+
         for module in self.input_blocks:
-            h = module(h, emb)
+            h = module(h, emb, emb_img)
             hs.append(h)
-        h = self.middle_block(h, emb)
+        h = self.middle_block(h, emb, emb_img)
         for module in self.output_blocks:
             h = torch.cat([h, hs.pop()], dim=1)
-            h = module(h, emb)
+            h = module(h, emb, emb_img)
         h = h.type(x.dtype)
+
         return self.out(h)
 
 if __name__ == '__main__':

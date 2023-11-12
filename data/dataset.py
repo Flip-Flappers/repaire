@@ -151,7 +151,6 @@ class InpaintDataset(data.Dataset):
         else:"""
         mask = self.get_mask()
         self.my_num += 1
-        self.my_num = self.my_num % 20
 
         #加入噪声后的图片 原图0.5
         cond_image = img*(1. - mask) + mask*torch.randn_like(img)
@@ -168,11 +167,15 @@ class InpaintDataset(data.Dataset):
         ret['mask_image'] = mask_img
         ret['mask'] = mask
         if self.mask_mode == 'test':
-            ret['path'] = path[0][51:55] + '_' + path[2]
+            ret['path'] =  path[0][46:50] + '_' + path[2]
         elif self.mask_mode == 'fgsm':
             ret['path'] = path[0][51:55] + '_' + path[2]
         elif self.mask_mode == 'test':
             ret['path'] = path[0][47:51] + '_' + path[2]
+        elif self.mask_mode == "pgd_success_test":
+            ret['path'] = path[0][48:52] + '_' + path[2]
+        else:
+            ret['path'] = ""
         return ret
 
     def __len__(self):
@@ -182,9 +185,13 @@ class InpaintDataset(data.Dataset):
 
 
         regular_mask = bbox2mask(self.image_size, random_bbox())
-        irregular_mask = brush_stroke_mask(self.image_size, )
+        #irregular_mask = brush_stroke_mask(self.image_size, )
         #mask = regular_mask | irregular_mask | brush_stroke_mask(self.image_size, ) | brush_stroke_mask(self.image_size, ) | brush_stroke_mask(self.image_size, )
-        mask = irregular_mask | regular_mask
+        #mask = irregular_mask | regular_mask
+        mask = regular_mask
+        t1 = torch.rand(1)
+        #if t1[0] < 0.5:
+        #    return torch.ones(self.image_size).unsqueeze(0)
         return torch.from_numpy(mask).permute(2,0,1)
 
 
@@ -262,11 +269,19 @@ class ColorizationDataset(data.Dataset):
         file_name = str(self.flist[index]).zfill(5) + '.png'
         ori_image_file_name = file_name.split(",", 1)
         img = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0])))
-        cond_image = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0][:35] + "ori_image" + ori_image_file_name[0][44:])))
+        if ori_image_file_name[0].count("train") > 0:
+            cond_image = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0][:35] + "gray_image" + ori_image_file_name[0][44:])))
+        elif ori_image_file_name[0].count("pgd") > 0:
+            cond_image = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0][:38] + "success_gray_image" + ori_image_file_name[0][45:])))
+        else:
+            cond_image = self.tfs(self.loader('{}/{}'.format(self.data_root, ori_image_file_name[0][:34] + "gray_image" + ori_image_file_name[0][43:])))
 
         ret['gt_image'] = img
         ret['cond_image'] = cond_image
-        ret['path'] = file_name
+        if ori_image_file_name[0].count("pgd") > 0:
+            ret['path'] = ori_image_file_name[0][48:52] + "_" + ori_image_file_name[1][57:65]
+        else:
+            ret['path'] = ori_image_file_name[0][46:50] + "_" + ori_image_file_name[1][59:67]
         return ret
 
     def __len__(self):

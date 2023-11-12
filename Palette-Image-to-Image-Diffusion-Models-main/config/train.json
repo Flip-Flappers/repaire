@@ -19,17 +19,17 @@
             "which_dataset": {  // import designated dataset using arguments
                 "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
-                    "data_root": "datasets/celebahq/flist/train_.flist",
+                    "data_root": "datasets/celebahq/flist/train.flist",
                     "data_len": -1,
                     "mask_config": {
-                        "mask_mode": "hybrid2"
+                        "mask_mode": "train"
                     }
                 }
             },
             "dataloader":{
                 "validation_split": 2, // percent or number
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 100, // batch size in each gpu
+                    "batch_size": 50, // batch size in each gpu
                     "num_workers": 0,
                     "shuffle": true,
                     "pin_memory": true,

@@ -31,12 +31,12 @@ from train_color_dector import Pconv_models
 parser = argparse.ArgumentParser(description='1')
 
 parser.add_argument('--attack', type=str)
-parser.add_argument('--target', type=bool)
+
 
 args = parser.parse_args()
 
 attack = args.attack
-target = args.target
+target = False
 num = 0
 
 trainset = torchvision.datasets.CIFAR10(root='../../root_data', train=False, download=True,
@@ -72,8 +72,8 @@ elif attack == 'PGD':
         adversary = PGDAttack(
             net_R,
             loss_fn=nn.CrossEntropyLoss(reduction="sum"),
-            eps=4 / 255,
-            nb_iter=10, eps_iter=4 / 255 / 5, clip_min=0, clip_max=1.0,
+            eps=8 / 255,
+            nb_iter=20, eps_iter=2 / 255, clip_min=0, clip_max=1.0,
             targeted=False)
     # FGSM
 elif attack == 'FGSM':
@@ -100,17 +100,20 @@ all_loss = 0
 correct = 0
 
 num = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
+num2 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 for data in tqdm(trainloader):
     ori_tensor, labels = data
 
     true_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(ori_tensor.cuda()))[0].argmax()
-    if true_label == labels[0]:
-        final_image_tmp = adversary.perturb(ori_tensor.cuda(), torch.tensor(int(labels[0])).unsqueeze(0).cuda())
-        fgsm_image = transforms.ToPILImage()(final_image_tmp.squeeze(0))
-        tmp_fgsm_image = transforms.ToTensor()(fgsm_image).unsqueeze(0)
-        fin_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(tmp_fgsm_image))[0].argmax()
-        if fin_label != true_label:
-            s = "{:04d}".format(num[fin_label])
-            fgsm_image.save(root + 'pgd/ori_image/' + str(int(fin_label)) + '/' + s + '.png')
-            num[fin_label] += 1
+    final_image_tmp = adversary.perturb(ori_tensor.cuda(), torch.tensor(int(labels[0])).unsqueeze(0).cuda())
+    fgsm_image = transforms.ToPILImage()(final_image_tmp.squeeze(0))
+    tmp_fgsm_image = transforms.ToTensor()(fgsm_image).unsqueeze(0)
+    fin_label = net_R(transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])(tmp_fgsm_image))[0].argmax()
+    if fin_label != true_label:
+        s = "{:04d}".format(num[true_label])
+        fgsm_image.save(root + 'pgd/success/' + str(int(true_label)) + '/' + s + '.png')
+        num[true_label] += 1
+    else:
+        s = "{:04d}".format(num2[true_label])
+        fgsm_image.save(root + 'pgd/fail/' + str(int(true_label)) + '/' + s + '.png')
+        num2[true_label] += 1

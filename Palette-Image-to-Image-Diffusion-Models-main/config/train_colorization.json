@@ -20,7 +20,7 @@
                 "name": ["data.dataset", "ColorizationDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
                     "data_root": "",
-                    "data_flist": "datasets/celebahq/flist/train_.flist",
+                    "data_flist": "datasets/celebahq/flist/train.flist",
                     "data_len": -1
                 }
             },
@@ -133,7 +133,7 @@
         "n_epoch": 1e8, // max epochs, not limited now
         "n_iter": 1e8, // max interations
         "val_epoch": 5, // valdation every specified number of epochs
-        "save_checkpoint_epoch": 10,
+        "save_checkpoint_epoch": 50,
         "log_iter": 1e3, // log every specified number of iterations
         "tensorboard" : true // tensorboardX enable
     },

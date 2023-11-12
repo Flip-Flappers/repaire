@@ -1,3 +1,5 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 import math
 import torch
 from inspect import isfunction
@@ -85,6 +87,7 @@ class Network(BaseNetwork):
             from .guided_diffusion_modules.unet import UNet
 
         self.denoise_fn = UNet(**unet)
+        self.denoise_fn = torch.nn.DataParallel(self.denoise_fn)
         self.beta_schedule = beta_schedule
 
     def set_loss(self, loss_fn):
@@ -129,10 +132,10 @@ class Network(BaseNetwork):
         posterior_log_variance_clipped = extract(self.posterior_log_variance_clipped, t, y_t.shape)
         return posterior_mean, posterior_log_variance_clipped
 
-    def p_mean_variance(self, y_t, t, clip_denoised: bool, y_cond=None):
+    def p_mean_variance(self, y_t, t, clip_denoised: bool, y_cond=None, y_0=None):
         noise_level = extract(self.gammas, t, x_shape=(1, 1)).to(y_t.device)
         y_0_hat = self.predict_start_from_noise(
-            y_t, t=t, noise=self.denoise_fn(torch.cat([y_cond, y_t], dim=1), noise_level))
+            y_t, t=t, noise=self.denoise_fn(torch.cat([y_cond, y_t], dim=1), noise_level, y_0))
 
         if clip_denoised:
             y_0_hat.clamp_(-1., 1.)
@@ -156,17 +159,29 @@ class Network(BaseNetwork):
         return model_mean + noise * (0.5 * model_log_variance).exp()
 
     @torch.no_grad()
-    def p_sample2(self, y_t, t, clip_denoised=True, y_cond=None):
+    def p_sample2(self, y_t, t, clip_denoised=True, y_cond=None, y_0=None, y_cond_no=None):
         model_mean, model_log_variance = self.p_mean_variance(
-            y_t=y_t, t=t, clip_denoised=clip_denoised, y_cond=y_cond)
+            y_t=y_t, t=t, clip_denoised=clip_denoised, y_cond=y_cond, y_0=y_0)
+
+        model_mean_ud, model_log_variance_ud = self.p_mean_variance(
+            y_t=y_t, t=t, clip_denoised=True, y_cond=y_cond_no, y_0=y_0)
+
         noise = torch.randn_like(y_t) if any(t > 0) else torch.zeros_like(y_t)
-        return model_mean + noise * (0.5 * model_log_variance).exp(), model_mean, model_log_variance
+
+        return model_mean + noise * (0.5 * model_log_variance + 2 * (
+                    model_log_variance - model_log_variance_ud)).exp(), model_mean, model_log_variance
+
+
+
 
 
 
 
     @torch.no_grad()
     def restoration(self, y_cond, y_t=None, y_0=None, mask=None, sample_num=8):
+        # color
+        #y_0 = y_cond
+
         b, *_ = y_cond.shape
         vb = []
         assert self.num_timesteps > sample_num, 'num_timesteps must greater than sample_num'
@@ -174,23 +189,24 @@ class Network(BaseNetwork):
 
         y_t = default(y_t, lambda: torch.randn_like(y_cond))
         ret_arr = y_t
+        y_cond_no = torch.zeros(y_cond.shape).cuda()
         for i in tqdm(reversed(range(0, self.num_timesteps)), desc='sampling loop time step', total=self.num_timesteps):
 
             t = torch.full((b,), i, device=y_cond.device, dtype=torch.long)
-            true_mean, true_log_variance_clipped = self.q_posterior(y_0_hat=y_0, y_t=y_t, t=t)
-            y_t, out_mean, out_log_variance = self.p_sample2(y_t, t, y_cond=y_cond)
-            kl = normal_kl(true_mean * mask, true_log_variance_clipped, out_mean * mask, out_log_variance)
-            kl = mean_flat(kl) / np.log(2.0)
+
+            y_t, out_mean, out_log_variance = self.p_sample2(y_t, t, y_cond=y_cond, y_0=y_0, y_cond_no = y_cond_no)
+
+
+
             decoder_nll = - discretized_gaussian_log_likelihood(y_0, means=out_mean, log_scales=0.5 * out_log_variance)
             decoder_nll = mean_flat(decoder_nll) / np.log(2.0)
-            ans = torch.where((t == 0), decoder_nll, kl)
-            vb.append(kl)
+
 
             if mask is not None:
                 y_t = y_0 * (1. - mask) + mask * y_t
             if i % sample_inter == 0:
                 ret_arr = torch.cat([ret_arr, y_t], dim=0)
-        vb = torch.stack(vb, dim=1)
+
         return y_t, ret_arr, decoder_nll
 
     def forward(self, y_0, y_cond=None, mask=None, noise=None):
@@ -207,10 +223,12 @@ class Network(BaseNetwork):
             y_0=y_0, sample_gammas=sample_gammas.view(-1, 1, 1, 1), noise=noise)
 
         if mask is not None:
-            noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy * mask + (1. - mask) * y_0], dim=1), sample_gammas)
+
+            noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy * mask + (1. - mask) * y_0], dim=1), sample_gammas, y_0)
             loss = self.loss_fn(mask * noise, mask * noise_hat)
         else:
-            noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy], dim=1), sample_gammas)
+
+            noise_hat = self.denoise_fn(torch.cat([y_cond, y_noisy], dim=1), sample_gammas, y_0)
             loss = self.loss_fn(noise, noise_hat)
         return loss
 

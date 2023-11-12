@@ -155,17 +155,25 @@ class Palette(BaseModel):
         self.fgsm_ok = 0
         self.fgsm_false = 0
         self.all_num = 0
-        self.big_task = "test"
+        self.big_task = "pgd_success_colorization"
         if self.big_task == "fgsm":
             self.writer2 = SummaryWriter("run/fgsm")
             self.root = '../../fin_dataset/cifar10/test/fgsm'
-        elif self.big_task == "pgd":
-            self.writer2 = SummaryWriter("run/pgd")
-            self.root = '../../fin_dataset/cifar10/test/pgd'
-        else:
+        elif self.big_task == "pgd_success":
+            self.writer2 = SummaryWriter("run/pgd_success")
+            self.root = '../../fin_dataset/cifar10/test/pgd_success'
+        elif self.big_task == "pgd_fail":
+            self.writer2 = SummaryWriter("run/pgd_fail")
+            self.root = '../../fin_dataset/cifar10/test/pgd_fail'
+        elif self.big_task == "test":
             self.root = '../../fin_dataset/cifar10/test'
-
             self.writer2 = SummaryWriter("run/test")
+        elif self.big_task == "test_colorization":
+            self.root = '../../fin_dataset/cifar10/test/'
+            self.writer2 = SummaryWriter("run/test/test_colorization/test")
+        elif self.big_task == "pgd_success_colorization":
+            self.root = '../../fin_dataset/cifar10/test/'
+            self.writer2 = SummaryWriter("run/test/test_colorization/pgd_success")
 
     def set_input(self, data):
         ''' must use set_device in tensor '''
@@ -229,8 +237,6 @@ class Palette(BaseModel):
             self.set_input(train_data)
             self.optG.zero_grad()
 
-
-
             loss = self.netG(self.gt_image, self.cond_image, mask=self.mask)
             loss.backward()
             self.optG.step()
@@ -293,8 +299,8 @@ class Palette(BaseModel):
         self.test_metrics.reset()
 
         filename = 'test_result.cvs'
-        #create a cvs
-        
+        # create a cvs
+        tmp_sort_ans = []
         tmp_ans = torch.zeros([1000 * 10, 10])
         my_num = 0
         with torch.no_grad():
@@ -313,10 +319,12 @@ class Palette(BaseModel):
                     if self.task in ['inpainting', 'uncropping']:
 
                         self.output, self.visuals, bpd = self.netG.restoration(self.cond_image, y_t=self.cond_image,
-                                                                          y_0=self.gt_image, mask=self.mask,
-                                                                          sample_num=self.sample_num)
+                                                                               y_0=self.gt_image, mask=self.mask,
+                                                                               sample_num=self.sample_num)
                     else:
-                        self.output, self.visuals = self.netG.restoration(self.cond_image, sample_num=self.sample_num)
+                        self.output, self.visuals, bpd = self.netG.restoration(self.cond_image,
+                                                                               sample_num=self.sample_num,
+                                                                               y_0=self.gt_image)
 
                 self.iter += self.batch_size
                 self.writer.set_iter(self.epoch, self.iter, phase='test')
@@ -377,8 +385,8 @@ class Palette(BaseModel):
                             tmp_value = value[start:end]
 
                             for jj in range(10):
-                                p1 = gt_image[ii][jj] * mask[ii][jj]
-                                p2 = tmp_value[jj] * mask[ii][jj]
+                                p1 = gt_image[ii][jj]
+                                p2 = tmp_value[jj]
                                 tmp_mae += nn.L1Loss()(p1, p2)
                                 ssims += ssim(gt_image[ii][jj].unsqueeze(0), tmp_value[jj].unsqueeze(0), val_range=255)
 
@@ -389,18 +397,19 @@ class Palette(BaseModel):
                             feature_mse = nn.MSELoss()(features, feature[ii])
                             num = 0
                             for j in range(out_put_label.shape[0]):
-                                tmp_poss += nn.KLDivLoss()(nn.Softmax()(true_poss[ii]).log(), nn.Softmax()(out_put_label[j]))
+                                tmp_poss += nn.KLDivLoss()(nn.Softmax()(true_poss[ii]).log(),
+                                                           nn.Softmax()(out_put_label[j]))
                                 if out_put_label[j].argmax() != 0:
                                     num += 1
                             p = num / out_put_label.shape[0]
                             tmp_bpd = bpd[start:end].sum()
 
-                            self.writer2.add_scalar('rand/alert_p', p, global_step=int(self.all_num / 2))
-                            self.writer2.add_scalar('rand/tmp_mae', tmp_mae, global_step=int(self.all_num / 2))
-                            self.writer2.add_scalar('rand/IS', tmp_poss, global_step=int(self.all_num / 2))
-                            self.writer2.add_scalar('rand/tmp_bpd', tmp_bpd, global_step=int(self.all_num / 2))
-                            self.writer2.add_scalar('rand/ssims', ssims, global_step=int(self.all_num / 2))
-                            self.writer2.add_scalar('rand/feature_mse', feature_mse, global_step=int(self.all_num / 2))
+                            self.writer2.add_scalar('rand/alert_p', p, global_step=int(self.all_num))
+                            self.writer2.add_scalar('rand/tmp_mae', tmp_mae, global_step=int(self.all_num))
+                            self.writer2.add_scalar('rand/IS', tmp_poss, global_step=int(self.all_num))
+                            self.writer2.add_scalar('rand/tmp_bpd', tmp_bpd, global_step=int(self.all_num))
+                            self.writer2.add_scalar('rand/ssims', ssims, global_step=int(self.all_num))
+                            self.writer2.add_scalar('rand/feature_mse', feature_mse, global_step=int(self.all_num))
 
                             tmp_ans[my_num][0] = true_label[ii]
                             tmp_ans[my_num][1] = tmp_mae
@@ -409,13 +418,16 @@ class Palette(BaseModel):
                             tmp_ans[my_num][4] = ssims
                             tmp_ans[my_num][5] = feature_mse
                             my_num += 1
-
+                            tmp_sort_ans.append(tmp_bpd)
+                            tmp_sort_ans.sort()
+                            sort_loc = int(self.all_num * 0.95)
+                            print(tmp_sort_ans[sort_loc])
 
                             start += 10
                             end += 10
                             self.all_num += 1
                     self.writer.save_images(self.save_current_results())
-                torch.save(tmp_ans, 'test_result.pt')
+                torch.save(tmp_ans, self.big_task + '.pt')
             test_log = self.test_metrics.result()
             ''' save logged informations into log dict '''
             test_log.update({'epoch': self.epoch, 'iters': self.iter})
@@ -423,7 +435,6 @@ class Palette(BaseModel):
             ''' print logged informations to the screen and tensorboard '''
             for key, value in test_log.items():
                 self.logger.info('{:5s}: {}\t'.format(str(key), value))
-        
 
     def load_networks(self):
         """ save pretrained model and training state, which only do on GPU 0. """

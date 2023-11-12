@@ -18,9 +18,11 @@ import argparse
 fin_ans = 0
 zuidacha = 0
 pingjuncha = 0
-root = '../../fin_dataset/cifar10/train/'
-ori_num_train = [4990, 4996, 4981, 4978, 4991, 4980, 4991, 4998, 4995, 4996]
-#ori_num_test = [1003, 1004, 971, 1003, 1005, 999, 1003, 1001, 1002, 1009]
+root = '../../fin_dataset/cifar10/test/deepfool'
+#ori_num_train = [4990, 4996, 4981, 4978, 4991, 4980, 4991, 4998, 4995, 4996]
+ori_num_test = [920, 968, 876, 832, 917, 863, 942, 945, 953, 957]
+pgd_num_test = [797, 794, 1195, 1353, 1080, 1100, 593, 445, 756, 1144]
+deepfool_num_test = [1030, 769, 1233, 1594, 948, 1413, 608, 581, 709, 1115]
 net = torch.load("../net_T/pre/resnet20_check_point.pth").cuda()
 net.eval()
 
@@ -28,48 +30,48 @@ parser = argparse.ArgumentParser(description='1')
 
 parser.add_argument('--ll', type=int)
 args = parser.parse_args()
-for ll in range(10):
-    print(ll)
-    for numss in tqdm(range(ori_num_train[ll])):
-        # copy ori picture
-        s = "{:04d}".format(numss)
+ll = args.ll
+print(ll)
+for numss in tqdm(range(deepfool_num_test[ll])):
+    # copy ori picture
+    s = "{:04d}".format(numss)
 
-        # make mask
-        image = cv2.imread(root + '/ori_image/' + str(ll) + '/' + s + '.png')
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        seg_ans = Segmentation.init_R(image, image.shape[0], image.shape[1], 100., 3, 0.8, net, ll)
-        ans = seg_ans[0]
-        tmp = np.zeros([32, 32, 3])
-        tmp2 = np.zeros([3, 32, 32])
-        color = np.zeros([ans.max() + 1, 3])
-        visit = np.ones((ans.max() + 1)) * -1
-        num = 0
-        for i in range(32):
-            for j in range(32):
-                if (visit[ans[i][j]] == -1):
-                    visit[ans[i][j]] = num
-                    num += 1
-        # print(num)
-        all = np.zeros([num, 3])
-        all_num = np.zeros(num)
-        avg = np.zeros([num, 3])
-        max_color = np.zeros([num, 3])
-        min_color = np.ones([num, 3]) * 255
-        for i in range(32):
-            for j in range(32):
-                for z in range(3):
-                    all[int(visit[ans[i][j]])][z] = all[int(visit[ans[i][j]])][z] + image[i][j][z]
-                    all_num[int(visit[ans[i][j]])] += 1
-                    max_color[int(visit[ans[i][j]])][z] = max(max_color[int(visit[ans[i][j]])][z], image[i][j][z])
-                    min_color[int(visit[ans[i][j]])][z] = min(min_color[int(visit[ans[i][j]])][z], image[i][j][z])
-        mask = np.zeros([32, 32, 3])
+    # make mask
+    image = cv2.imread(root + '/success/' + str(ll) + '/' + s + '.png')
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    seg_ans = Segmentation.init_R(image, image.shape[0], image.shape[1], 100., 3, 0.8, net, ll)
+    ans = seg_ans[0]
+    tmp = np.zeros([32, 32, 3])
+    tmp2 = np.zeros([3, 32, 32])
+    color = np.zeros([ans.max() + 1, 3])
+    visit = np.ones((ans.max() + 1)) * -1
+    num = 0
+    for i in range(32):
+        for j in range(32):
+            if (visit[ans[i][j]] == -1):
+                visit[ans[i][j]] = num
+                num += 1
+    # print(num)
+    all = np.zeros([num, 3])
+    all_num = np.zeros(num)
+    avg = np.zeros([num, 3])
+    max_color = np.zeros([num, 3])
+    min_color = np.ones([num, 3]) * 255
+    for i in range(32):
+        for j in range(32):
+            for z in range(3):
+                all[int(visit[ans[i][j]])][z] = all[int(visit[ans[i][j]])][z] + image[i][j][z]
+                all_num[int(visit[ans[i][j]])] += 1
+                max_color[int(visit[ans[i][j]])][z] = max(max_color[int(visit[ans[i][j]])][z], image[i][j][z])
+                min_color[int(visit[ans[i][j]])][z] = min(min_color[int(visit[ans[i][j]])][z], image[i][j][z])
+    mask = np.zeros([32, 32, 3])
 
-        for i in range(32):
-            for j in range(32):
-                for z in range(3):
-                    mask[i][j][z] = all[int(visit[ans[i][j]])][z]  / all_num[int(visit[ans[i][j]])] * 3
-        mask = PIL.Image.fromarray(np.uint8(mask))
+    for i in range(32):
+        for j in range(32):
+            for z in range(3):
+                mask[i][j][z] = all[int(visit[ans[i][j]])][z]  / all_num[int(visit[ans[i][j]])] * 3
+    mask = PIL.Image.fromarray(np.uint8(mask))
 
 
-        mask.save(root + '/gray_image/' + str(ll) + '/' + s
-                  + '.png')
+    mask.save(root + '/success_gray_image/' + str(ll) + '/' + s
+              + '.png')
